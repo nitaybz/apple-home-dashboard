@@ -10,7 +10,7 @@ const config: webpack.Configuration = {
   entry: './src/apple-home-strategy.ts',
   output: {
     clean: true,
-    filename: 'apple-home-strategy.js',
+    filename: 'apple-home-dashboard.js', // renamed to match repository name
     path: path.resolve(__dirname, 'dist'),
   },
   resolve: {

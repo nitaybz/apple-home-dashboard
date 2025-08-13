@@ -2,7 +2,7 @@
   "name": "apple-home-dashboard",
   "version": "1.0.0",
   "description": "Apple Home-inspired dashboard strategy for Home Assistant",
-  "main": "apple-home-strategy.js",
+  "main": "apple-home-dashboard.js",
   "scripts": {
     "build": "webpack",
     "build:dev": "webpack --mode=development --watch",
@@ -64,7 +64,7 @@
   ],
   "hacs": {
     "name": "Apple Home Dashboard Strategy",
-    "filename": "apple-home-strategy.js",
+    "filename": "apple-home-dashboard.js",
     "render_readme": true
   }
 }

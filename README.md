@@ -162,15 +162,15 @@ Accessory names are automatically cleaned to remove redundant room/area names (m
 2. Install “Apple Home Dashboard Strategy”
 3. Restart Home Assistant if prompted
 4. Add resource automatically (or manually if needed):
-   - URL: /hacsfiles/apple-home-dashboard/apple-home-strategy.js
+   - URL: /hacsfiles/apple-home-dashboard/apple-home-dashboard.js
    - Type: Module
 
 ### Option 2: Manual
-1. Download `apple-home-strategy.js` from the latest release
-2. Place in `/config/www/apple-home-strategy.js`
+1. Download `apple-home-dashboard.js` from the latest release
+2. Place in `/config/www/apple-home-dashboard.js`
 3. Add a Lovelace resource:
    - Settings → Dashboards → Resources → +
-   - URL: /local/apple-home-strategy.js
+   - URL: /local/apple-home-dashboard.js
    - Type: Module
 
 ### Create the Dashboard

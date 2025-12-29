@@ -87,7 +87,7 @@ export class AppleHomeView extends HTMLElement {
     this.appleHeader.addRefreshCallback(this.refreshCallback);
     
     this.dragAndDropManager = new DragAndDropManager(
-      (areaId) => this.handleSaveCurrentOrder(areaId),
+      (areaId: string) => this.handleSaveCurrentOrder(areaId),
       this.customizationManager,
       'home' // Use home context for home page
     );

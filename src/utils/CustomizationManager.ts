@@ -1,23 +1,30 @@
 import { DashboardConfig } from '../config/DashboardConfig';
 import { localize } from './LocalizationService';
+import { DashboardStateManager } from './DashboardStateManager';
 
 export class CustomizationManager {
   private static instance: CustomizationManager | null = null;
   private customizations: any = { home: {}, pages: {}, ui: {}, background: {} };
   private _hass?: any;
   private isLoaded = false;
-  private isDashboardActive = false;
-  private dashboardUrl: string | null = null;
+  // Track the dashboard key this manager is associated with
+  private currentDashboardKey: string | null = null;
+  private dashboardStateListener?: (isActive: boolean, dashboardKey?: string | null) => void;
 
   constructor(hass?: any) {
     this._hass = hass;
-    this.dashboardUrl = window.location.pathname;
     
     // Listen for dashboard activation to load corresponding customizations
-    import('./DashboardStateManager').then(({ DashboardStateManager }) => {
-      DashboardStateManager.getInstance().addListener(async (isActive: boolean) => {
-        if (isActive && this._hass) {
+    // The DashboardStateManager now properly tracks which dashboards are Apple Home
+    this.dashboardStateListener = async (isActive: boolean, dashboardKey?: string | null) => {
+      if (isActive && this._hass && dashboardKey) {
+        // Check if we're switching between different Apple Home dashboards
+        const isSwitchingDashboards = this.currentDashboardKey !== null && 
+                                       this.currentDashboardKey !== dashboardKey;
+        
+        if (isSwitchingDashboards || !this.isLoaded) {
           try {
+            this.currentDashboardKey = dashboardKey;
             // Load customizations for the current dashboard key
             const loaded = await this.loadCustomizations();
             await this.setCustomizations(loaded);
@@ -27,65 +34,12 @@ export class CustomizationManager {
             console.error('Error reloading customizations on dashboard change:', err);
           }
         }
-      });
-    });
-    
-    // Also listen for URL changes to detect dashboard switches
-    this.setupUrlChangeListener();
-  }
-
-  /**
-   * Setup URL change listener to detect dashboard switches
-   */
-  private setupUrlChangeListener(): void {
-    // Store original pushState and replaceState methods
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
-    
-    // Override pushState to detect navigation
-    history.pushState = function(...args) {
-      originalPushState.apply(history, args);
-      CustomizationManager.getInstance().handleUrlChange();
-    };
-    
-    // Override replaceState to detect navigation  
-    history.replaceState = function(...args) {
-      originalReplaceState.apply(history, args);
-      CustomizationManager.getInstance().handleUrlChange();
-    };
-    
-    // Listen for popstate events (back/forward buttons)
-    window.addEventListener('popstate', () => {
-      CustomizationManager.getInstance().handleUrlChange();
-    });
-  }
-
-  /**
-   * Handle URL changes to detect dashboard switches
-   */
-  private async handleUrlChange(): Promise<void> {
-    const currentUrl = window.location.pathname;
-    
-    // Check if we switched to a different dashboard
-    if (this.dashboardUrl !== currentUrl) {
-      const oldDashboardKey = await this.getCurrentDashboardKey(this._hass);
-      this.dashboardUrl = currentUrl;
-      const newDashboardKey = await this.getCurrentDashboardKey(this._hass);
-      
-      // Only reload if we're switching between different dashboards and we have hass
-      if (oldDashboardKey !== newDashboardKey && this._hass) {
-        // Small delay to ensure new page is loaded
-        setTimeout(async () => {
-          try {
-            const loaded = await this.loadCustomizations();
-            await this.setCustomizations(loaded);
-            this.triggerGlobalDashboardRefresh();
-          } catch (err) {
-            console.error('Error reloading customizations on dashboard switch:', err);
-          }
-        }, 100);
+      } else if (!isActive) {
+        // Reset the current dashboard key when leaving Apple Home dashboards
+        this.currentDashboardKey = null;
       }
-    }
+    };
+    DashboardStateManager.getInstance().addListener(this.dashboardStateListener);
   }
 
   // Singleton pattern to ensure we have one shared instance
@@ -695,44 +649,46 @@ export class CustomizationManager {
     return homeData.included_switches || [];
   }
 
-  // Dashboard state tracking methods
+  async getExtraAccessories(): Promise<string[]> {
+    await this.ensureCustomizationsLoaded();
+    const homeData = this.getCustomization('home');
+    return homeData.extra_accessories || [];
+  }
+
+  // Dashboard state tracking methods - delegate to DashboardStateManager
   setDashboardActive(isActive: boolean): void {
-    this.isDashboardActive = isActive;
+    // This method is now just for backward compatibility
+    // The actual state is managed by DashboardStateManager
     if (isActive) {
-      this.dashboardUrl = window.location.pathname;
+      this.currentDashboardKey = this.extractDashboardKeyFromUrl();
+    } else {
+      this.currentDashboardKey = null;
     }
+  }
+
+  private extractDashboardKeyFromUrl(): string | null {
+    const path = window.location.pathname;
+    const match = path.match(/^\/([^\/]+)/);
+    return match ? match[1] : null;
   }
 
   isDashboardCurrentlyActive(): boolean {
-    return this.isDashboardActive;
+    // Delegate to DashboardStateManager for accurate state
+    return import('./DashboardStateManager').then(({ DashboardStateManager }) => {
+      return DashboardStateManager.getInstance().isDashboardActive();
+    }) as unknown as boolean;
   }
 
   getDashboardUrl(): string | null {
-    return this.dashboardUrl;
+    // Return current path if we have a dashboard key
+    return this.currentDashboardKey ? window.location.pathname : null;
   }
 
   // Check if current URL matches dashboard URL pattern
+  // This now delegates to DashboardStateManager for consistency
   isCurrentlyInDashboard(): boolean {
-    const currentPath = window.location.pathname;
-    
-    // If we have a stored dashboard URL, check if we're still on it
-    if (this.dashboardUrl) {
-      const dashboardBase = this.dashboardUrl.split('/').slice(0, 2).join('/');
-      if (currentPath.startsWith(dashboardBase)) {
-        return true;
-      }
-    }
-    // Check for dashboard page patterns (/dashboardKey/page)
-    const dashboardMatch = currentPath.match(/\/([^\/]+)\/([^\/\?#]+)/);
-    if (dashboardMatch && dashboardMatch[1] && dashboardMatch[2]) {
-      return true;
-    }
-    // Also treat base dashboard paths (/dashboardKey) as active dashboards
-    const baseMatch = currentPath.match(/^\/([^\/]+)$/);
-    if (baseMatch && baseMatch[1]) {
-      return true;
-    }
-    return false;
+    // Synchronous check - use the tracked dashboard key
+    return this.currentDashboardKey !== null;
   }
 
   // UI Settings management
@@ -791,10 +747,57 @@ export class CustomizationManager {
     await this.saveCustomizations();
   }
 
+  /**
+   * Batch update multiple customization sections in a single save operation.
+   * This is more efficient than calling setCustomization multiple times.
+   * @param updates - Object with section names as keys and their new data as values
+   */
+  async batchSetCustomizations(updates: Record<string, any>): Promise<void> {
+    await this.ensureCustomizationsLoaded();
+    
+    // Apply all updates to in-memory customizations
+    for (const [section, data] of Object.entries(updates)) {
+      this.customizations = {
+        ...this.customizations,
+        [section]: data
+      };
+    }
+    
+    // Single save operation for all changes
+    await this.saveCustomizations();
+  }
+
+  /**
+   * Update a customization section in memory without saving.
+   * Use with saveCustomizations() for batch operations.
+   */
+  setCustomizationLocal(section: string, newSectionObject: any): void {
+    this.customizations = {
+      ...this.customizations,
+      [section]: newSectionObject
+    };
+  }
+
   // Convenience method for updating a single property within a section
   async updateCustomizationProperty(section: string, property: string, value: any): Promise<void> {
     const sectionData = this.getCustomization(section);
     sectionData[property] = value;
     await this.setCustomization(section, sectionData);
+  }
+
+  /**
+   * Cleanup - destroy the singleton
+   */
+  static destroy(): void {
+    if (CustomizationManager.instance) {
+      // Remove the dashboard state listener
+      if (CustomizationManager.instance.dashboardStateListener) {
+        DashboardStateManager.getInstance().removeListener(
+          CustomizationManager.instance.dashboardStateListener
+        );
+        CustomizationManager.instance.dashboardStateListener = undefined;
+      }
+      CustomizationManager.instance = null;
+    }
   }
 }

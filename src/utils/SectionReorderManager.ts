@@ -2,6 +2,7 @@ import { CustomizationManager } from './CustomizationManager';
 import Sortable from 'sortablejs';
 import { localize } from './LocalizationService';
 import { RTLHelper } from './RTLHelper';
+import { injectLiquidGlassStyles, LiquidGlassClasses } from './LiquidGlassStyles';
 
 interface SectionItem {
   id: string;
@@ -182,9 +183,14 @@ export class SectionReorderManager {
       <div class="modal-backdrop"></div>
       <div class="modal-content">
         <div class="modal-header">
-          <button class="modal-cancel">${localize('ui_actions.cancel')}</button>
+          <button class="modal-cancel ${LiquidGlassClasses.modalCancel}">
+            <ha-icon icon="mdi:close"></ha-icon>
+          </button>
           <h2>${localize('section_reorder.title')}</h2>
-          <button class="modal-done">${localize('ui_actions.done')}</button>
+          <button class="modal-done ${LiquidGlassClasses.modalDone}">
+            <ha-icon icon="mdi:check"></ha-icon>
+            <div class="save-spinner"></div>
+          </button>
         </div>
         <div class="modal-body">
           <div class="sections-list">
@@ -212,6 +218,9 @@ export class SectionReorderManager {
   }
 
   private addModalStyles() {
+    // Inject centralized liquid glass button styles
+    injectLiquidGlassStyles();
+    
     if (document.querySelector('#apple-section-reorder-styles')) return;
 
     const style = document.createElement('style');
@@ -247,16 +256,13 @@ export class SectionReorderManager {
         max-width: 90vw;
         max-height: 80vh;
         background: rgba(28, 28, 30, 1);
-        backdrop-filter: blur(40px);
-        -webkit-backdrop-filter: blur(40px);
         border-radius: 16px;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
         transform: scale(0.9);
         opacity: 0;
         transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        display: flex;
-        flex-direction: column;
       }
 
       .apple-section-reorder-modal.show .modal-content {
@@ -265,10 +271,32 @@ export class SectionReorderManager {
       }
 
       .modal-header {
+        background: transparent;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 10px;
+        padding: 12px 16px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .modal-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: -30px;
+        background: linear-gradient(
+          to bottom,
+          rgba(28, 28, 30, 1) 0%,
+          rgba(28, 28, 30, 0.95) 30%,
+          rgba(28, 28, 30, 0.7) 60%,
+          rgba(28, 28, 30, 0) 100%
+        );
+        z-index: -1;
+        pointer-events: none;
       }
 
       .modal-header h2 {
@@ -278,30 +306,19 @@ export class SectionReorderManager {
         color: white;
         text-align: center;
         flex: 1;
+        position: relative;
+        z-index: 2;
       }
 
-      .modal-cancel,
-      .modal-done {
-        background: none;
-        border: none;
-        color: #ffaf00;
-        font-size: 16px;
-        font-weight: 400;
-        cursor: pointer;
-        padding: 8px 0;
-        min-width: 50px;
-        text-align: center;
-      }
-
-      .modal-done {
-        font-weight: 600;
+      /* Modal-specific button positioning */
+      .modal-header .modal-cancel,
+      .modal-header .modal-done {
+        z-index: 2;
       }
 
       .modal-body {
-        flex: 1;
-        overflow-y: auto;
         padding: 0;
-        min-height: 0;
+        padding-bottom: 20px;
       }
 
       .sections-list {
@@ -315,8 +332,8 @@ export class SectionReorderManager {
         display: flex;
         align-items: center;
         padding: 6px 12px;
-        border-bottom: 0.5px solid rgba(84, 84, 88, 0.3);
-        background: rgba(44, 44, 46, 0.8);
+        border-bottom: 0.5px solid rgba(84, 84, 88, 0.8);
+        background: rgb(39 39 39 / 80%);
         user-select: none;
         -webkit-user-select: none;
         transition: background 0.2s ease;
@@ -445,6 +462,78 @@ export class SectionReorderManager {
         .section-item {
           padding: 16px 20px;
         }
+      }
+      
+      /* Extra small / accessibility screens */
+      @media (max-width: 359px) {
+        .modal-content {
+          height: calc(100dvh - env(safe-area-inset-top) - 10px);
+        }
+        
+        .modal-header h2 {
+          font-size: 16px;
+        }
+        
+        .section-item {
+          padding: 14px 16px;
+        }
+        
+        .section-name {
+          font-size: 15px;
+        }
+        
+        .section-visibility-toggle {
+          width: 32px;
+          height: 32px;
+        }
+        
+        .section-visibility-toggle ha-icon {
+          --mdc-icon-size: 20px;
+        }
+      }
+      
+      /* Reduce motion for accessibility */
+      @media (prefers-reduced-motion: reduce) {
+        .modal-content,
+        .section-item,
+        .sortable-drag,
+        .save-spinner {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+
+      /* Loading state styles */
+      .apple-section-reorder-modal.saving .modal-content {
+        pointer-events: none;
+      }
+
+      .apple-section-reorder-modal.saving .modal-done,
+      .apple-section-reorder-modal.saving .modal-cancel {
+        pointer-events: none;
+        opacity: 0.5;
+      }
+
+      .modal-done .save-spinner {
+        display: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      .apple-section-reorder-modal.saving .modal-done ha-icon {
+        display: none;
+      }
+
+      .apple-section-reorder-modal.saving .modal-done .save-spinner {
+        display: block;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
     `;
     
@@ -639,22 +728,31 @@ export class SectionReorderManager {
   }
 
   private async saveAndClose() {
-    // Save the new section order and visibility settings
-    await this.saveSectionConfiguration();
-    
-    // Clean up sortable instance
+    // Show loading state immediately
+    if (this.modal) {
+      this.modal.classList.add('saving');
+    }
+
+    // Clean up sortable instance first
     if (this.sortableInstance) {
       this.sortableInstance.destroy();
       this.sortableInstance = undefined;
     }
     
-    // Start closing the modal with fade effect
+    // Start modal fade immediately (while save happens in parallel)
     if (this.modal) {
       this.modal.style.transition = 'opacity 0.3s ease-out';
       this.modal.style.opacity = '0';
     }
+
+    // Run save operation (this is the potentially slow part)
+    try {
+      await this.saveSectionConfiguration();
+    } catch (error) {
+      console.error('Error saving section configuration:', error);
+    }
     
-    // Wait for modal to fully fade before doing anything else
+    // Clean up modal after fade animation
     setTimeout(() => {
       // Restore background scrolling
       document.body.style.overflow = '';
@@ -666,14 +764,11 @@ export class SectionReorderManager {
       }
       this.modal = undefined;
       
-      // Only trigger callback after everything is cleaned up
+      // Trigger callback to refresh the dashboard
       if (this.onSaveCallback) {
-        // Additional small delay to ensure smooth transition
-        setTimeout(() => {
-          this.onSaveCallback();
-        }, 100);
+        this.onSaveCallback();
       }
-    }, 350); // Wait for fade animation + buffer
+    }, 300);
   }
 
   private async saveSectionConfiguration() {
@@ -683,12 +778,14 @@ export class SectionReorderManager {
       .filter(s => !s.visible)
       .map(s => s.id);
 
-    // Update home section directly
+    // Update home section - use local update then single save
     const home = this.customizationManager.getCustomization('home') || {};
     if (!home.sections) home.sections = {};
     home.sections.order = sectionOrder;
     home.sections.hidden = hiddenSections;
-    await this.customizationManager.setCustomization('home', home);
+    
+    // Use batch save for efficiency (single WebSocket call)
+    await this.customizationManager.batchSetCustomizations({ home });
   }
 
   private handleEscapeKey = (e: KeyboardEvent) => {

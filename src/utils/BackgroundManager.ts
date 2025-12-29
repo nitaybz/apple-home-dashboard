@@ -56,6 +56,9 @@ export class BackgroundManager {
 
   // Default background is the first preset
   static readonly DEFAULT_BACKGROUND = 'default';
+  
+  // Track our listener so we can clean it up
+  private dashboardStateListener?: (isActive: boolean, dashboardKey?: string | null) => void;
 
   constructor(customizationManager: CustomizationManager) {
     this.customizationManager = customizationManager;
@@ -63,9 +66,10 @@ export class BackgroundManager {
     
     // Only start monitoring if this is the first instance
     if (BackgroundManager.activeInstances.size === 0) {
-      DashboardStateManager.getInstance().addListener((isInDashboard: boolean) => {
-        this.handleDashboardStateChange(isInDashboard);
-      });
+      this.dashboardStateListener = (isActive: boolean, dashboardKey?: string | null) => {
+        this.handleDashboardStateChange(isActive);
+      };
+      DashboardStateManager.getInstance().addListener(this.dashboardStateListener);
     }
     
     // Listen for dashboard refresh events to update background configuration
@@ -149,6 +153,15 @@ export class BackgroundManager {
       value: config.backgroundImage
     };
     await this.customizationManager.setCustomization('background', storageConfig);
+    this.applyBackgroundToBody(config);
+  }
+
+  /**
+   * Apply background visually without saving to storage.
+   * Use this when the background config has already been saved elsewhere.
+   */
+  applyBackgroundOnly(config: BackgroundConfig): void {
+    this.currentBackground = config;
     this.applyBackgroundToBody(config);
   }
 
@@ -305,6 +318,12 @@ export class BackgroundManager {
    * Cleanup method - call when dashboard is destroyed
    */
   cleanup(): void {
+    // Remove dashboard state listener
+    if (this.dashboardStateListener) {
+      DashboardStateManager.getInstance().removeListener(this.dashboardStateListener);
+      this.dashboardStateListener = undefined;
+    }
+    
     // Remove dashboard refresh event listener
     if (this.dashboardRefreshHandler) {
       document.removeEventListener('apple-home-dashboard-refresh', this.dashboardRefreshHandler);

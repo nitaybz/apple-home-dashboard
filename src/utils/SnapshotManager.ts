@@ -23,18 +23,20 @@ export class SnapshotManager {
   private hass?: any;
   private dashboardStateManager: DashboardStateManager;
   private isPaused = false;
+  private dashboardStateListener?: (isActive: boolean, dashboardKey?: string | null) => void;
 
   private constructor() {
     this.dashboardStateManager = DashboardStateManager.getInstance();
     
     // Listen for dashboard state changes
-    this.dashboardStateManager.addListener((isActive: boolean) => {
+    this.dashboardStateListener = (isActive: boolean, dashboardKey?: string | null) => {
       if (isActive) {
         this.resume();
       } else {
         this.pause();
       }
-    });
+    };
+    this.dashboardStateManager.addListener(this.dashboardStateListener);
   }
 
   static getInstance(): SnapshotManager {
@@ -288,6 +290,14 @@ export class SnapshotManager {
    */
   public static destroy(): void {
     if (SnapshotManager.instance) {
+      // Remove the dashboard state listener
+      if (SnapshotManager.instance.dashboardStateListener) {
+        SnapshotManager.instance.dashboardStateManager.removeListener(
+          SnapshotManager.instance.dashboardStateListener
+        );
+        SnapshotManager.instance.dashboardStateListener = undefined;
+      }
+      
       // Clear all individual camera timers
       SnapshotManager.instance.snapshots.forEach((snapshotData, entityId) => {
         if (snapshotData.fetchTimer) {

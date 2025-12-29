@@ -13,7 +13,6 @@ import { RoomPage } from '../pages/RoomPage';
 import { ScenesPage } from '../pages/ScenesPage';
 import { CamerasPage } from '../pages/CamerasPage';
 import { DeviceGroup } from '../config/DashboardConfig';
-import { DashboardStateManager } from '../utils/DashboardStateManager';
 
 export class AppleHomeView extends HTMLElement {
   // Dashboard-specific management - keyed by dashboard URL base
@@ -128,10 +127,8 @@ export class AppleHomeView extends HTMLElement {
     };
     document.addEventListener('apple-home-dashboard-refresh', this.globalRefreshHandler);
     
-    // CRITICAL: Initialize dashboard state manager to detect we're in dashboard
-    const stateManager = DashboardStateManager.getInstance();
-    const currentPath = window.location.pathname;
-    stateManager.setDashboardActive(currentPath);
+    // Note: Dashboard registration is handled by the strategy when it generates the dashboard
+    // The DashboardStateManager tracks which dashboards are Apple Home dashboards
     
     // CRITICAL: Set this as the active instance for this dashboard
     this.setCurrentActiveInstance(this);
@@ -165,11 +162,8 @@ export class AppleHomeView extends HTMLElement {
     // Clean up all camera managers in the current content
     this.cleanupCameras();
     
-    // CRITICAL: Mark dashboard as inactive when disconnecting
-    const stateManager = DashboardStateManager.getInstance();
-    if (stateManager.isDashboardActive()) {
-      stateManager.setDashboardInactive();
-    }
+    // Note: We don't manually set dashboard inactive here
+    // The DashboardStateManager handles this automatically via URL change detection
   }
 
   private async handleGlobalRefresh(customizations: any) {
@@ -555,6 +549,22 @@ export class AppleHomeView extends HTMLElement {
       structureCreated = true;
       this.shadowRoot!.innerHTML = `
         <style>
+          /* ============================================
+             Responsive Design System
+             ============================================
+             Breakpoints:
+             - Desktop: > 1199px (4 columns)
+             - Tablet: 768px - 1199px (3 columns)
+             - Mobile: 480px - 767px (2 columns)
+             - Small Mobile: 360px - 479px (2 columns, smaller)
+             - Extra Small / Accessibility: < 360px (1 column)
+             
+             Accessibility considerations:
+             - Respects prefers-reduced-motion
+             - Scales with user font-size preferences
+             - Single column for accessibility enlarged displays
+             ============================================ */
+          
           :host {
             display: block;
             padding: 0 22px 22px 22px;
@@ -562,7 +572,24 @@ export class AppleHomeView extends HTMLElement {
             width: 100%;
             background: transparent;
             position: relative;
+            /* CSS custom properties for responsive sizing */
+            --card-gap: 12px;
+            --card-row-height: 80px;
+            --section-margin: 32px;
+            --title-font-size: 34px;
+            --section-title-font-size: 20px;
+            --page-padding: 22px;
           }
+          
+          /* Reduce motion for accessibility */
+          @media (prefers-reduced-motion: reduce) {
+            :host * {
+              animation-duration: 0.01ms !important;
+              animation-iteration-count: 1 !important;
+              transition-duration: 0.01ms !important;
+            }
+          }
+          
           .wrapper-content {
             width: 100%;
             max-width: none;
@@ -576,7 +603,7 @@ export class AppleHomeView extends HTMLElement {
           
           /* Page title (big title below header) */
           .apple-page-title {
-            font-size: 34px;
+            font-size: clamp(24px, 7vw, var(--title-font-size));
             font-weight: 700;
             color: #ffffff;
             margin: 0 0 14px 0;
@@ -588,11 +615,11 @@ export class AppleHomeView extends HTMLElement {
           }
           
           .area-section {
-            margin-bottom: 32px;
+            margin-bottom: var(--section-margin);
           }
           .area-title {
             font-weight: 500;
-            font-size: 20px;
+            font-size: clamp(17px, 4.5vw, var(--section-title-font-size));
             color: #fff;
             margin: 30px 0 6px;
             padding: 0;
@@ -604,7 +631,7 @@ export class AppleHomeView extends HTMLElement {
 
           /* Special section titles (Scenes, Cameras) */
           .apple-home-section-title {
-            font-size: 20px;
+            font-size: clamp(17px, 4.5vw, var(--section-title-font-size));
             font-weight: 500;
             color: #fff;
             margin: 30px 0 6px;
@@ -627,7 +654,7 @@ export class AppleHomeView extends HTMLElement {
 
           .clickable-section-title .section-arrow {
             color: rgba(255, 255, 255, 0.6);
-            --mdc-icon-size: 26px;
+            --mdc-icon-size: clamp(22px, 5vw, 26px);
             transition: color 0.2s ease;
           }
 
@@ -642,10 +669,11 @@ export class AppleHomeView extends HTMLElement {
           .carousel-container {
             overflow-x: auto;
             overflow-y: hidden;
-            margin-bottom: 32px;
+            margin-bottom: var(--section-margin);
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none; /* IE/Edge */
+            user-select: none;
           }
 
           .carousel-container::-webkit-scrollbar {
@@ -654,7 +682,7 @@ export class AppleHomeView extends HTMLElement {
 
           .carousel-grid {
             display: flex;
-            gap: 12px;
+            gap: var(--card-gap);
           }
 
           /* Camera carousel - Apple-style tight grid */
@@ -676,6 +704,7 @@ export class AppleHomeView extends HTMLElement {
           .carousel-grid.cameras .entity-card-wrapper {
             height: 210px; /* Taller for cameras */
             width: calc(23% - 1.5px); /* Tighter width for cameras to account for smaller gap */
+            min-width: 160px; /* Minimum width to ensure cameras don't get too small */
           }
 
           /* Ensure camera cards are always tall in carousel */
@@ -734,9 +763,9 @@ export class AppleHomeView extends HTMLElement {
           .room-group-grid, .scenes-grid, .cameras-grid {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
-            grid-auto-rows: 80px;
-            gap: 12px;
-            margin-bottom: 32px;
+            grid-auto-rows: var(--card-row-height);
+            gap: var(--card-gap);
+            margin-bottom: var(--section-margin);
           }
 
           .room-group-grid .entity-card-wrapper,
@@ -755,7 +784,7 @@ export class AppleHomeView extends HTMLElement {
 
           /* Room group section titles */
           .room-group-title {
-            font-size: 20px;
+            font-size: clamp(17px, 4.5vw, 20px);
             font-weight: 600;
             color: #fff;
             margin: 30px 0 16px;
@@ -765,7 +794,7 @@ export class AppleHomeView extends HTMLElement {
 
           /* Group section spacing */
           .room-group-section {
-            margin-bottom: 32px;
+            margin-bottom: var(--section-margin);
           }
 
           .room-group-section:last-child {
@@ -775,8 +804,8 @@ export class AppleHomeView extends HTMLElement {
           .area-entities {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
-            grid-auto-rows: 80px;
-            gap: 12px;
+            grid-auto-rows: var(--card-row-height);
+            gap: var(--card-gap);
             margin-bottom: 24px;
           }
           
@@ -825,18 +854,107 @@ export class AppleHomeView extends HTMLElement {
             position: relative !important;
           }
           
+          /* SortableJS ghost element - the placeholder left behind (empty space indicator) */
+          .sortable-ghost {
+            opacity: 0.2 !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-radius: 16px !important;
+            box-shadow: none !important;
+          }
+          
+          .sortable-ghost > * {
+            opacity: 0 !important;
+          }
+          
+          /* SortableJS chosen element - the original element being dragged */
+          .sortable-chosen {
+            /* Keep original appearance but disable animations */
+            animation: none !important;
+          }
+          
+          /* SortableJS drag element - during native drag (not used with forceFallback) */
+          .sortable-drag {
+            opacity: 1 !important;
+          }
+          
+          /* SortableJS fallback element - the floating clone that follows cursor/touch */
+          .sortable-fallback {
+            position: fixed !important;
+            opacity: 1 !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
+            transform: scale(1.05) rotate(2deg) !important;
+            border-radius: 16px !important;
+            z-index: 100000 !important;
+            pointer-events: none !important;
+            transition: none !important;
+          }
+          
           /* Smooth transitions for cards making room during drag operations */
-          .entity-card-wrapper:not(.dragging) {
+          .entity-card-wrapper:not(.dragging):not(.sortable-ghost) {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
           }
           
-          .entity-card-wrapper.dragging {
-            /* Dragging styles are applied via inline styles in DragAndDropManager */
+          .entity-card-wrapper.dragging,
+          .entity-card-wrapper.sortable-chosen {
+            /* Dragging styles */
             animation: none !important; /* Disable shake animation during drag */
           }
           
           .entity-card-wrapper.animating {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          }
+          
+          /* Chip wrapper sortable styles */
+          /* Ghost placeholder - hide completely, we just show the gap */
+          .chip-wrapper.sortable-ghost {
+            opacity: 0 !important;
+            visibility: hidden !important;
+          }
+          
+          .chip-wrapper.sortable-ghost > * {
+            opacity: 0 !important;
+            visibility: hidden !important;
+          }
+          
+          /* Hide the original chip being dragged (matches scene card behavior) */
+          .chip-wrapper.sortable-drag {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transition: none !important;
+          }
+          
+          /* Chip sortable fallback - the floating clone that follows cursor/touch */
+          .chip-wrapper.sortable-fallback {
+            position: fixed !important;
+            opacity: 1 !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
+            transform: scale(1.05) rotate(2deg) !important;
+            border-radius: 20px !important;
+            z-index: 100000 !important;
+            pointer-events: none !important;
+            transition: none !important;
+          }
+          
+          /* Ensure the chip inside fallback is properly styled */
+          .chip-wrapper.sortable-fallback .chip {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            padding: 4px 20px 4px 10px !important;
+            border-radius: 20px !important;
+            background: rgba(255, 255, 255, 0.25) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+          }
+          
+          /* Smooth transitions for chips making room during drag */
+          .chip-wrapper:not(.dragging):not(.sortable-ghost) {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          }
+          
+          .chip-wrapper.sortable-chosen,
+          .chip-wrapper.dragging {
+            animation: none !important; /* Disable shake animation during drag */
           }
           
           .entity-controls {
@@ -894,7 +1012,16 @@ export class AppleHomeView extends HTMLElement {
             grid-row: span 2;
           }
           
+          /* ============================================
+             TABLET BREAKPOINT (768px - 1199px)
+             3 columns layout
+             ============================================ */
           @media (max-width: 1199px) {
+            :host {
+              --card-gap: 10px;
+              --card-row-height: 76px;
+            }
+            
             .entity-card-wrapper {
               grid-column: span 4;
             }
@@ -917,13 +1044,22 @@ export class AppleHomeView extends HTMLElement {
             }
           }
           
+          /* ============================================
+             MOBILE BREAKPOINT (480px - 767px)
+             2 columns layout
+             ============================================ */
           @media (max-width: 767px) {
             :host {
               padding: 0 16px;
+              --card-gap: 10px;
+              --card-row-height: 72px;
+              --section-margin: 24px;
+              --page-padding: 16px;
             }
             
             .apple-page-title {
-              font-size: 28px;
+              font-size: clamp(24px, 7vw, 28px);
+              margin-bottom: 10px;
             }
             
             .entity-card-wrapper {
@@ -954,6 +1090,7 @@ export class AppleHomeView extends HTMLElement {
             .carousel-grid.cameras .entity-card-wrapper {
               height: 170px;
               width: calc(46% - 1px); /* Tighter width for cameras with 2px gap */
+              min-width: 140px;
             }
             
             /* Touch-friendly controls for mobile */
@@ -969,16 +1106,140 @@ export class AppleHomeView extends HTMLElement {
             }
           }
 
+          /* ============================================
+             SMALL MOBILE BREAKPOINT (360px - 479px)
+             2 columns but smaller cards
+             ============================================ */
           @media (max-width: 479px) {
+            :host {
+              padding: 0 12px;
+              --card-gap: 8px;
+              --card-row-height: 68px;
+              --section-margin: 20px;
+            }
+            
+            .apple-page-title {
+              font-size: 24px;
+            }
+            
+            .area-title,
+            .apple-home-section-title,
+            .room-group-title {
+              font-size: 17px;
+              margin-top: 20px;
+            }
+
+            /* Cameras go full width on small mobile */
             .cameras-grid .entity-card-wrapper {
               grid-column: span 12;
+              grid-row: span 2;
+            }
+
+            /* Camera carousel adjustments - show 1.5 cameras */
+            .carousel-grid.cameras .entity-card-wrapper {
+              height: 160px;
+              width: calc(65% - 1px);
+              min-width: 180px;
+            }
+            
+            /* Single camera takes more space */
+            .carousel-grid.cameras .entity-card-wrapper:first-child:last-child {
+              width: 100%;
+              max-width: 100%;
+            }
+            
+            /* Two cameras show side by side but larger */
+            .carousel-grid.cameras .entity-card-wrapper:first-child:nth-last-child(2),
+            .carousel-grid.cameras .entity-card-wrapper:last-child:nth-child(2) {
+              width: calc(50% - 1px);
+              min-width: 140px;
             }
           }
 
-          @media (max-width: 400px) {
+          /* ============================================
+             EXTRA SMALL / ACCESSIBILITY BREAKPOINT (< 360px)
+             Single column layout - like Apple Home
+             Also triggered by large text/zoom accessibility
+             ============================================ */
+          @media (max-width: 359px) {
+            :host {
+              padding: 0 10px;
+              --card-gap: 8px;
+              --card-row-height: 64px;
+              --section-margin: 16px;
+            }
+            
+            .apple-page-title {
+              font-size: 22px;
+            }
+            
+            /* Single column for all cards */
+            .entity-card-wrapper {
+              grid-column: span 12 !important;
+            }
+
+            .room-group-grid .entity-card-wrapper,
+            .scenes-grid .entity-card-wrapper {
+              grid-column: span 12 !important;
+            }
+            
+            /* Tall cards span 2 rows in single column */
+            .entity-card-wrapper.tall {
+              grid-row: span 2;
+            }
+
+            /* Carousel: single item visible */
+            .carousel-grid .entity-card-wrapper {
+              width: 100% !important;
+              max-width: 100%;
+            }
+
+            /* Camera carousel - full width single camera */
+            .carousel-grid.cameras .entity-card-wrapper {
+              height: 180px;
+              width: 100% !important;
+              min-width: auto;
+            }
+            
+            /* All cameras get rounded corners in single column mode */
+            .carousel-grid.cameras .entity-card-wrapper apple-home-card {
+              border-radius: 16px !important;
+            }
+          }
+          
+          /* ============================================
+             ACCESSIBILITY: Large Text / Zoom Detection
+             When user has accessibility settings for 
+             larger text, switch to single column
+             ============================================ */
+          @media (max-width: 400px) and (min-resolution: 2dppx) {
+            /* High DPI small screens - likely accessibility zoom */
             .room-group-grid .entity-card-wrapper,
             .scenes-grid .entity-card-wrapper {
               grid-column: span 12;
+            }
+          }
+          
+          /* Very narrow viewport (accessibility zoom or split screen) */
+          @media (max-width: 320px) {
+            :host {
+              padding: 0 8px;
+              --card-row-height: 60px;
+            }
+            
+            .apple-page-title {
+              font-size: 20px;
+            }
+            
+            .area-title,
+            .apple-home-section-title,
+            .room-group-title {
+              font-size: 16px;
+            }
+            
+            /* Even smaller cards for very narrow screens */
+            .carousel-grid.cameras .entity-card-wrapper {
+              height: 150px;
             }
           }
         </style>
@@ -1565,22 +1826,16 @@ export class AppleHomeView extends HTMLElement {
     if (!this._hass) return;
     
     try {
-      // Get fresh customizations
+      // Get fresh customizations from the manager
       const freshCustomizations = this.customizationManager.getCustomizations();
-      const oldCustomizations = this.config?.customizations;
       
-      // Only render if customizations actually changed
-      if (JSON.stringify(oldCustomizations) === JSON.stringify(freshCustomizations)) {
-        return;
-      }
-      
-      // Update config with fresh customizations
+      // Update config with fresh customizations (always update to ensure sync)
       this.config = {
         ...this.config,
-        customizations: freshCustomizations
+        customizations: JSON.parse(JSON.stringify(freshCustomizations)) // Deep clone to ensure change detection works
       };
       
-      // Direct render - renderPage will handle double render protection
+      // Force re-render - the callback was triggered because something changed
       this._rendered = false;
       await this.renderPage('refreshCallback');
       

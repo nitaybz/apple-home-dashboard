@@ -18,6 +18,10 @@ import { BackgroundManager } from './utils/BackgroundManager';
 import { HomeAssistantUIManager } from './utils/HomeAssistantUIManager';
 import { SnapshotManager } from './utils/SnapshotManager';
 import { RTLHelper } from './utils/RTLHelper';
+import { injectLiquidGlassStyles } from './utils/LiquidGlassStyles';
+
+// Inject liquid glass styles early at module load time
+injectLiquidGlassStyles();
 
 // Extend window interface for TypeScript
 declare global {
@@ -26,6 +30,18 @@ declare global {
     customStrategies?: { [key: string]: any };
     appleHomeCleanupRegistered?: boolean;
   }
+}
+
+import { DashboardStateManager } from './utils/DashboardStateManager';
+
+/**
+ * Extract the dashboard key from the current URL
+ * /apple-home/home -> "apple-home"
+ */
+function getCurrentDashboardKey(): string {
+  const path = window.location.pathname;
+  const match = path.match(/^\/([^\/]+)/);
+  return match ? match[1] : 'lovelace';
 }
 
 /**
@@ -43,6 +59,15 @@ async function generateLovelaceDashboard(
   
   // Initialize RTL support
   RTLHelper.initialize(hass);
+  
+  // CRITICAL: Register this dashboard with the DashboardStateManager
+  // This is how we know which dashboards are Apple Home Dashboards
+  const dashboardKey = getCurrentDashboardKey();
+  const dashboardStateManager = DashboardStateManager.getInstance();
+  dashboardStateManager.registerDashboard(dashboardKey);
+  
+  // Set this dashboard as active since we're generating it
+  dashboardStateManager.setDashboardActive(dashboardKey);
   
   const views = [];
 

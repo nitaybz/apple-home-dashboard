@@ -18,6 +18,8 @@ export class HomeAssistantUIManager {
   private dashboardStateManager: DashboardStateManager | null = null;
   private listenerSetup = false;
   private lastSidebarState: boolean | null = null;
+  private dashboardStateListener?: (isActive: boolean, dashboardKey?: string | null) => void;
+  private restoreTimeout: number | null = null;
 
   private constructor() {
     // Initialize with default visible state - will be overridden by dashboard settings
@@ -309,14 +311,13 @@ export class HomeAssistantUIManager {
       this.applyDashboardUISettings();
     }
     
-    // Debounce restoration to avoid flicker on quick navigations
-    let restoreTimeout: number | null = null;
-    this.dashboardStateManager.addListener((isActive: boolean) => {
+    // Create and store the listener so we can remove it later
+    this.dashboardStateListener = (isActive: boolean, dashboardKey?: string | null) => {
       if (isActive) {
         // Cancel pending restoration
-        if (restoreTimeout !== null) {
-          clearTimeout(restoreTimeout);
-          restoreTimeout = null;
+        if (this.restoreTimeout !== null) {
+          clearTimeout(this.restoreTimeout);
+          this.restoreTimeout = null;
         }
         // Entering dashboard - apply dashboard UI settings
         requestAnimationFrame(() => {
@@ -324,12 +325,14 @@ export class HomeAssistantUIManager {
         });
       } else {
         // Leaving dashboard - schedule restoration after delay
-        restoreTimeout = window.setTimeout(() => {
+        this.restoreTimeout = window.setTimeout(() => {
           this.restoreOriginalUIState();
-          restoreTimeout = null;
+          this.restoreTimeout = null;
         }, 300);
       }
-    });
+    };
+    
+    this.dashboardStateManager.addListener(this.dashboardStateListener);
   }
 
   private applyDashboardUISettings(): void {
@@ -390,11 +393,18 @@ export class HomeAssistantUIManager {
    * Stop dashboard state listening
    */
   private stopDashboardStateListener(): void {
-    if (this.dashboardStateManager) {
-      // Note: We don't remove the listener since other components might be using it
-      // The DashboardStateManager will handle cleanup when destroyed
-      this.dashboardStateManager = null;
+    // Clear any pending restore timeout
+    if (this.restoreTimeout !== null) {
+      clearTimeout(this.restoreTimeout);
+      this.restoreTimeout = null;
     }
+    
+    // Remove the listener from DashboardStateManager
+    if (this.dashboardStateManager && this.dashboardStateListener) {
+      this.dashboardStateManager.removeListener(this.dashboardStateListener);
+      this.dashboardStateListener = undefined;
+    }
+    this.dashboardStateManager = null;
   }
 
   /**

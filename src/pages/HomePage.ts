@@ -86,13 +86,20 @@ export class HomePage {
       const entities = await DataService.getEntities(hass);
       const devices = await DataService.getDevices(hass);
       
-      // Get showSwitches and includedSwitches settings
+      // Get showSwitches, includedSwitches, and extraAccessories settings
       const showSwitches = await this.customizationManager?.getShowSwitches() || false;
       const includedSwitches = await this.customizationManager?.getIncludedSwitches() || [];
+      const extraAccessories = await this.customizationManager?.getExtraAccessories() || [];
       
       // Filter entities for supported domains and exclude those marked for exclusion
       const supportedEntities = entities.filter(entity => {
         const domain = entity.entity_id.split('.')[0];
+        
+        // Check if this entity is in the extraAccessories list (manually added entities)
+        if (extraAccessories.includes(entity.entity_id)) {
+          return true;
+        }
+        
         if (!DashboardConfig.isSupportedDomain(domain)) {
           return false;
         }

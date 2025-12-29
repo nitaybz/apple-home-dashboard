@@ -55,6 +55,37 @@ export class GroupPage {
     }
   }
 
+  /**
+   * Get the area ID for an entity, checking both entity registry and device registry
+   */
+  private getEntityAreaId(entity: Entity, devices: any[]): string {
+    // Check entity's area_id first
+    if (entity.area_id) {
+      return entity.area_id;
+    }
+    
+    // If entity doesn't have an area but has a device, check device's area
+    if (entity.device_id) {
+      const device = devices.find(d => d.id === entity.device_id);
+      if (device?.area_id) {
+        return device.area_id;
+      }
+    }
+    
+    // No area found - entity belongs to "no_area" (Default Room)
+    return 'no_area';
+  }
+
+  /**
+   * Check if an entity belongs to a hidden area/section
+   */
+  private isEntityInHiddenArea(entity: Entity, devices: any[], hiddenSections: string[]): boolean {
+    if (hiddenSections.length === 0) return false;
+    
+    const areaId = this.getEntityAreaId(entity, devices);
+    return hiddenSections.includes(areaId);
+  }
+
   private createGroupTitle(group: DeviceGroup): HTMLElement {
     const titleElement = document.createElement('h1');
     titleElement.className = 'apple-page-title';
@@ -99,6 +130,9 @@ export class GroupPage {
       const entities = await DataService.getEntities(hass);
       const devices = await DataService.getDevices(hass);
       
+      // Get hidden sections (areas) for filtering
+      const hiddenSections = this.customizationManager?.getHiddenSections() || [];
+      
       // Filter entities for supported domains and exclude those marked for exclusion
       const supportedEntities = entities.filter(entity => {
         const domain = entity.entity_id.split('.')[0];
@@ -112,19 +146,22 @@ export class GroupPage {
       });
 
       // Now apply exclusions asynchronously to both lists
+      // Also filter out entities from hidden areas
       const filteredEntities = [];
       const filteredStatusEntities = [];
       
       for (const entity of supportedEntities) {
         const isExcluded = await this.customizationManager?.isEntityExcludedFromDashboard(entity.entity_id) || false;
-        if (!isExcluded) {
+        const isInHiddenArea = this.isEntityInHiddenArea(entity, devices, hiddenSections);
+        if (!isExcluded && !isInHiddenArea) {
           filteredEntities.push(entity);
         }
       }
       
       for (const entity of statusEntities) {
         const isExcluded = await this.customizationManager?.isEntityExcludedFromDashboard(entity.entity_id) || false;
-        if (!isExcluded) {
+        const isInHiddenArea = this.isEntityInHiddenArea(entity, devices, hiddenSections);
+        if (!isExcluded && !isInHiddenArea) {
           filteredStatusEntities.push(entity);
         }
       }
@@ -183,10 +220,37 @@ export class GroupPage {
         }
       }
 
+      // Collect all entity IDs that belong to this group (for battery device matching)
+      const groupEntityIds = new Set<string>();
+      Object.values(groupEntitiesByArea).forEach(entities => {
+        entities.forEach(e => groupEntityIds.add(e.entity_id));
+      });
+      
       // Flatten all group entities for status section (including sensors)
       const statusGroupEntities = filteredStatusEntities.filter(entity => {
         const domain = entity.entity_id.split('.')[0];
         const entityState = this.hass?.states[entity.entity_id];
+        const deviceClass = entityState?.attributes?.device_class;
+        
+        // Battery sensors should be included only if their device has other entities in this group
+        // This ties battery status to the device it belongs to, not just the area
+        if (domain === 'sensor' && deviceClass === 'battery') {
+          // Find the device this battery entity belongs to
+          const batteryEntityRegistry = entities.find(e => e.entity_id === entity.entity_id);
+          if (!batteryEntityRegistry?.device_id) {
+            return false; // No device, don't show
+          }
+          
+          // Check if any other entity from the same device is in this group
+          const deviceId = batteryEntityRegistry.device_id;
+          const deviceHasGroupEntities = entities.some(e => 
+            e.device_id === deviceId && 
+            e.entity_id !== entity.entity_id && 
+            groupEntityIds.has(e.entity_id)
+          );
+          
+          return deviceHasGroupEntities;
+        }
         
         // Special handling for switches  
         if (domain === 'switch') {

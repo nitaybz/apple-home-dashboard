@@ -23,7 +23,10 @@ export class FavoritesSection {
       return; // Don't render if no favorites
     }
 
-    // Filter entities to only show favorites that exist and are supported
+    // Get extra accessories to also allow them as favorites
+    const extraAccessories = await this.customizationManager.getExtraAccessories();
+
+    // Filter entities to only show favorites that exist and are supported (or manually included)
     const favoriteEntities = favoriteAccessories
       .map((entityId: string) => {
         const state = hass.states[entityId];
@@ -43,7 +46,10 @@ export class FavoritesSection {
         }
         
         const domain = entityId.split('.')[0];
-        if (!DashboardConfig.isSupportedDomain(domain)) {
+        
+        // Allow entity if it's a supported domain OR if it's in the extraAccessories list
+        const isManuallyIncluded = extraAccessories.includes(entityId);
+        if (!DashboardConfig.isSupportedDomain(domain) && !isManuallyIncluded) {
           return null;
         }
         

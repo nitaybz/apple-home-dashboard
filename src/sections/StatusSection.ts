@@ -4,6 +4,7 @@ import { DataService } from '../utils/DataService';
 import { Entity, CardConfig, Area } from '../types/types';
 import { DashboardConfig } from '../config/DashboardConfig';
 import { localize } from '../utils/LocalizationService';
+import { liquidGlassCSS, LiquidGlassClasses } from '../utils/LiquidGlassStyles';
 
 export interface StatusData {
   domain: string;
@@ -120,7 +121,8 @@ export class StatusSection {
       { domain: 'outlets', icon: 'mdi:power-socket', label: localize('status_section.outlets') },
       { domain: 'temperature', icon: 'mdi:thermometer', label: localize('status_section.temperature') },
       { domain: 'humidity', icon: 'mdi:water-percent', label: localize('status_section.humidity') },
-      { domain: 'covers', icon: 'mdi:window-shutter', label: localize('status_section.covers') },
+      { domain: 'covers', icon: 'mdi:blinds-horizontal', label: localize('status_section.blinds') },
+      { domain: 'gates', icon: 'mdi:garage-variant', label: localize('status_section.garage_doors') },
       { domain: 'security', icon: 'mdi:shield-check', label: localize('status_section.security') },
       { domain: 'locks', icon: 'mdi:lock', label: localize('status_section.locks') },
       { domain: 'motion', icon: 'mdi:motion-sensor', label: localize('status_section.motion') },
@@ -215,9 +217,13 @@ export class StatusSection {
       statusMap.get('humidity')?.entityIds.push(entityId);
     }
     
-    // Covers
+    // Covers - separate gates/garage doors from regular covers
     else if (domain === 'cover') {
-      statusMap.get('covers')?.entityIds.push(entityId);
+      if (DashboardConfig.isGarageDoorOrGate(entityId, state.attributes)) {
+        statusMap.get('gates')?.entityIds.push(entityId);
+      } else {
+        statusMap.get('covers')?.entityIds.push(entityId);
+      }
     }
     
     // Security systems
@@ -295,6 +301,7 @@ export class StatusSection {
         return this.calculateHumidityRange(entityIds, hass);
       
       case 'covers':
+      case 'gates':
         return this.calculateCoverStatus(entityIds, hass);
       
       case 'security':
@@ -615,22 +622,22 @@ export class StatusSection {
       if (state) {
         const lux = parseFloat(state.state);
         if (!isNaN(lux) && lux >= 0) {
-          luxValues.push(Math.round(lux)); // Round lux values for cleaner display
+          luxValues.push(Math.round(lux));
         }
       }
     });
     
     if (luxValues.length === 0) return '';
-    if (luxValues.length === 1) return `${luxValues[0]} lux`;
+    if (luxValues.length === 1) return `${luxValues[0]} lx`;
     
     const min = Math.min(...luxValues);
     const max = Math.max(...luxValues);
     
-    if (min === max) { // If all values are the same
-      return `${min} lux`;
+    if (min === max) {
+      return `${min} lx`;
     }
     
-    return `${min}-${max} lux`;
+    return `${min}-${max} lx`;
   }
 
   private calculateSmokeStatus(entityIds: string[], hass: any): string {
@@ -798,9 +805,10 @@ export class StatusSection {
     const header = document.createElement('div');
     header.className = 'status-modal-header';
     header.innerHTML = `
-      <button class="modal-cancel">${localize('ui_actions.cancel')}</button>
+      <button class="modal-close ${LiquidGlassClasses.modalCancel}">
+        <ha-icon icon="mdi:close"></ha-icon>
+      </button>
       <h2>${statusData.label}</h2>
-      <button class="modal-done">${localize('ui_actions.done')}</button>
     `;
     
     // Modal body
@@ -855,16 +863,14 @@ export class StatusSection {
     modal.appendChild(modalContent);
     
     // Add event listeners
-    const cancelBtn = header.querySelector('.modal-cancel');
-    const doneBtn = header.querySelector('.modal-done');
-    
+    const closeBtn = header.querySelector('.modal-close');
+
     const closeModal = () => {
       modal.classList.remove('show');
       setTimeout(() => modal.remove(), 300);
     };
-    
-    cancelBtn?.addEventListener('click', closeModal);
-    doneBtn?.addEventListener('click', closeModal);
+
+    closeBtn?.addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => {
       if (e.target === modal) closeModal();
     });
@@ -1105,16 +1111,13 @@ export class StatusSection {
         max-width: 90vw;
         max-height: 80vh;
         background: rgba(28, 28, 30, 1);
-        backdrop-filter: blur(40px);
-        -webkit-backdrop-filter: blur(40px);
         border-radius: 16px;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
         transform: scale(0.9);
         opacity: 0;
         transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        display: flex;
-        flex-direction: column;
       }
       
       .status-modal-backdrop.show .status-modal-content {
@@ -1122,12 +1125,36 @@ export class StatusSection {
         opacity: 1;
       }
       
+      /* Liquid Glass Button Styles */
+      ${liquidGlassCSS}
+      
       .status-modal-header {
+        background: transparent;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 16px 20px;
-        border-bottom: 0.5px solid rgba(84, 84, 88, 0.3);
+        padding: 12px 16px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .status-modal-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: -30px;
+        background: linear-gradient(
+          to bottom,
+          rgba(28, 28, 30, 1) 0%,
+          rgba(28, 28, 30, 0.95) 30%,
+          rgba(28, 28, 30, 0.7) 60%,
+          rgba(28, 28, 30, 0) 100%
+        );
+        z-index: -1;
+        pointer-events: none;
       }
       
       .status-modal-header h2 {
@@ -1139,28 +1166,12 @@ export class StatusSection {
         flex: 1;
       }
       
-      .modal-cancel,
-      .modal-done {
-        background: none;
-        border: none;
-        color: #ffaf00;
-        font-size: 16px;
-        font-weight: 400;
-        cursor: pointer;
-        padding: 8px 0;
-        min-width: 60px;
-        text-align: center;
-      }
-      
-      .modal-done {
-        font-weight: 600;
+      .status-modal-header .modal-close {
+        z-index: 2;
       }
       
       .status-modal-body {
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        min-height: 0;
+        padding: 0 20px 20px 20px;
       }
       
       .status-modal-room-title {
@@ -1208,15 +1219,41 @@ export class StatusSection {
         border-radius: 16px;
       }
       
+      /* Tablet breakpoint */
       @media (max-width: 1199px) {
         .entity-card-wrapper {
           grid-column: span 4;
         }
       }
       
+      /* Mobile breakpoint */
       @media (max-width: 767px) {
         .entity-card-wrapper {
           grid-column: span 6;
+        }
+        
+        .status-modal-cards {
+          grid-auto-rows: 72px;
+          gap: 10px;
+        }
+      }
+      
+      /* Small mobile breakpoint */
+      @media (max-width: 479px) {
+        .status-modal-cards {
+          grid-auto-rows: 68px;
+          gap: 8px;
+        }
+      }
+      
+      /* Extra small / accessibility breakpoint - single column */
+      @media (max-width: 359px) {
+        .entity-card-wrapper {
+          grid-column: span 12 !important;
+        }
+        
+        .status-modal-cards {
+          grid-auto-rows: 64px;
         }
       }
       

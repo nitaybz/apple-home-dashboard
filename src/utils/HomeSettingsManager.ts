@@ -3,12 +3,14 @@ import { DashboardConfig } from '../config/DashboardConfig';
 import { localize } from './LocalizationService';
 import { BackgroundManager } from './BackgroundManager';
 import { HomeAssistantUIManager } from './HomeAssistantUIManager';
+import { injectLiquidGlassStyles, LiquidGlassClasses } from './LiquidGlassStyles';
 
 export interface HomeSettingsData {
   favoriteAccessories: string[];
   excludedFromDashboard: string[];
   excludedFromHome: string[];
   includedSwitches: string[];
+  extraAccessories: string[];
   backgroundType: 'preset' | 'custom';
   customBackground?: string;
   presetBackground?: string;
@@ -28,6 +30,7 @@ export class HomeSettingsManager {
     excludedFromDashboard: [],
     excludedFromHome: [],
     includedSwitches: [],
+    extraAccessories: [],
     backgroundType: 'preset',
     presetBackground: BackgroundManager.DEFAULT_BACKGROUND,
     showSwitches: false
@@ -37,11 +40,13 @@ export class HomeSettingsManager {
     excludedFromDashboard: [],
     excludedFromHome: [],
     includedSwitches: [],
+    extraAccessories: [],
     backgroundType: 'preset',
     presetBackground: BackgroundManager.DEFAULT_BACKGROUND,
     showSwitches: false
   };
   private availableEntities: any[] = [];
+  private allEntitiesForInclusion: any[] = [];
 
   constructor(customizationManager: CustomizationManager, onSaveCallback: () => void) {
     this.customizationManager = customizationManager;
@@ -70,6 +75,7 @@ export class HomeSettingsManager {
       excludedFromDashboard: customizations.home?.excluded_from_dashboard || [],
       excludedFromHome: customizations.home?.excluded_from_home || [],
       includedSwitches: customizations.home?.included_switches || [],
+      extraAccessories: customizations.home?.extra_accessories || [],
       backgroundType: currentBackground.type,
       customBackground: currentBackground.type === 'custom' ? currentBackground.backgroundImage : undefined,
       presetBackground: currentBackground.type === 'preset' ? currentBackground.backgroundImage : BackgroundManager.DEFAULT_BACKGROUND,
@@ -84,6 +90,7 @@ export class HomeSettingsManager {
       excludedFromDashboard: [...this.settings.excludedFromDashboard],
       excludedFromHome: [...this.settings.excludedFromHome],
       includedSwitches: [...this.settings.includedSwitches],
+      extraAccessories: [...this.settings.extraAccessories],
       backgroundType: this.settings.backgroundType,
       customBackground: this.settings.customBackground,
       presetBackground: this.settings.presetBackground,
@@ -97,7 +104,7 @@ export class HomeSettingsManager {
   private async loadAvailableEntities() {
     if (!this.hass) return;
 
-        // Get all entities that are supported by the dashboard
+    // Get all entities that are supported by the dashboard
     this.availableEntities = Object.values(this.hass.states)
       .filter((state: any) => {
         const domain = state.entity_id.split('.')[0];
@@ -127,6 +134,57 @@ export class HomeSettingsManager {
         area_id: state.attributes.area_id || null
       }))
       .sort((a, b) => a.friendly_name.localeCompare(b.friendly_name));
+
+    // Get ALL entities for the "Include Additional Entities" feature
+    // This includes entities not normally shown in the dashboard (sensors, input_boolean, button, etc.)
+    this.allEntitiesForInclusion = Object.values(this.hass.states)
+      .filter((state: any) => {
+        const domain = state.entity_id.split('.')[0];
+        
+        // Check if entity is hidden in the entity registry
+        const entityRegistry = this.hass.entities?.[state.entity_id];
+        if (entityRegistry && entityRegistry.hidden_by) {
+          return false;
+        }
+        
+        // Check if entity is disabled in the entity registry
+        if (entityRegistry && entityRegistry.disabled_by) {
+          return false;
+        }
+
+        // Check if entity is unavailable
+        const isAvailable = state.state && !['unavailable', 'unknown'].includes(state.state.toLowerCase());
+        if (!isAvailable) {
+          return false;
+        }
+        
+        // Exclude entities that are already supported domains (they're already in the dashboard)
+        if (DashboardConfig.isSupportedDomain(domain)) {
+          return false;
+        }
+        
+        // Exclude some domains that don't make sense as cards
+        const excludedDomains = [
+          'automation', 'person', 'zone', 'device_tracker', 'sun', 'weather',
+          'persistent_notification', 'conversation', 'tts', 'stt', 'update',
+          'calendar', 'group', 'image', 'notify', 'number', 'select', 'text',
+          'time', 'date', 'datetime'
+        ];
+        if (excludedDomains.includes(domain)) {
+          return false;
+        }
+        
+        return true;
+      })
+      .map((state: any) => ({
+        entity_id: state.entity_id,
+        friendly_name: state.attributes.friendly_name || state.entity_id,
+        domain: state.entity_id.split('.')[0],
+        state: state.state,
+        attributes: state.attributes,
+        area_id: state.attributes.area_id || null
+      }))
+      .sort((a, b) => a.friendly_name.localeCompare(b.friendly_name));
   }
 
   private formatPresetName(presetName: string): string {
@@ -141,8 +199,14 @@ export class HomeSettingsManager {
       <div class="modal-backdrop"></div>
       <div class="modal-content">
         <div class="modal-header">
-          <button class="modal-cancel">${localize('ui_actions.cancel')}</button>
-          <button class="modal-done">${localize('ui_actions.done')}</button>
+          <button class="modal-cancel ${LiquidGlassClasses.modalCancel}">
+            <ha-icon icon="mdi:close"></ha-icon>
+          </button>
+          <h2>${localize('settings.title')}</h2>
+          <button class="modal-done ${LiquidGlassClasses.modalDone}">
+            <ha-icon icon="mdi:check"></ha-icon>
+            <div class="save-spinner"></div>
+          </button>
         </div>
         <div class="modal-body">
           ${this.renderSettingsContent()}
@@ -233,6 +297,22 @@ export class HomeSettingsManager {
       </div>
 
       <div class="settings-section">
+        <h3 class="settings-section-header">${localize('settings.extra_accessories')}</h3>
+        <div class="settings-card">
+          <div class="entity-selector" data-setting="extraAccessories">
+            <div class="autocomplete-container">
+              <input type="text" class="autocomplete-input" placeholder="${localize('settings.search_entities')}" />
+              <div class="autocomplete-results"></div>
+            </div>
+            <div class="selected-entities">
+              ${this.renderSelectedEntitiesForInclusion(this.tempSettings.extraAccessories)}
+            </div>
+          </div>
+        </div>
+        <p class="settings-section-description">${localize('settings.extra_accessories_description')}</p>
+      </div>
+
+      <div class="settings-section">
         <h3 class="settings-section-header">${localize('settings.home_wallpaper')}</h3>
         <div class="settings-card">
           <div class="wallpaper-options">
@@ -279,7 +359,11 @@ export class HomeSettingsManager {
 
   private renderSelectedEntities(entityIds: string[]): string {
     return entityIds.map(entityId => {
-      const entity = this.availableEntities.find(e => e.entity_id === entityId);
+      // Check both lists since favorites may include manually added entities
+      let entity = this.availableEntities.find(e => e.entity_id === entityId);
+      if (!entity) {
+        entity = this.allEntitiesForInclusion.find(e => e.entity_id === entityId);
+      }
       if (!entity) return '';
       
       return `
@@ -291,7 +375,36 @@ export class HomeSettingsManager {
     }).join('');
   }
 
+  private renderSelectedEntitiesForInclusion(entityIds: string[]): string {
+    return entityIds.map(entityId => {
+      // Check both lists since included entities may come from either
+      let entity = this.allEntitiesForInclusion.find(e => e.entity_id === entityId);
+      if (!entity) {
+        entity = this.availableEntities.find(e => e.entity_id === entityId);
+      }
+      if (!entity) {
+        // Entity might be saved but no longer exists - show entity_id
+        return `
+          <div class="selected-entity-chip" data-entity-id="${entityId}">
+            <span class="entity-name">${entityId}</span>
+            <ha-icon icon="mdi:close" class="remove-entity"></ha-icon>
+          </div>
+        `;
+      }
+      
+      return `
+        <div class="selected-entity-chip" data-entity-id="${entityId}">
+          <span class="entity-name">${entity.friendly_name}</span>
+          <ha-icon icon="mdi:close" class="remove-entity"></ha-icon>
+        </div>
+      `;
+    }).join('');
+  }
+
   private addModalStyles() {
+    // Inject centralized liquid glass button styles
+    injectLiquidGlassStyles();
+    
     if (document.querySelector('#apple-home-settings-styles')) return;
 
     const style = document.createElement('style');
@@ -333,16 +446,13 @@ export class HomeSettingsManager {
         max-width: 90vw;
         max-height: 85vh;
         background: rgba(28, 28, 30, 1);
-        backdrop-filter: blur(40px);
-        -webkit-backdrop-filter: blur(40px);
         border-radius: 14px;
-        overflow: visible;
+        overflow-y: auto;
+        overflow-x: hidden;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
         transform: scale(0.9);
         opacity: 0;
         transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        display: flex;
-        flex-direction: column;
       }
 
       .apple-home-settings-modal.show .modal-content {
@@ -351,14 +461,32 @@ export class HomeSettingsManager {
       }
 
       .modal-header {
-        background: rgba(44, 44, 46, 0.8);
-        border-bottom: 0.5px solid rgba(84, 84, 88, 0.3);
+        background: transparent;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 10px;
-        position: relative;
-        border-radius: 14px 14px 0 0;
+        padding: 12px 16px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .modal-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: -30px;
+        background: linear-gradient(
+          to bottom,
+          rgba(28, 28, 30, 1) 0%,
+          rgba(28, 28, 30, 0.95) 30%,
+          rgba(28, 28, 30, 0.7) 60%,
+          rgba(28, 28, 30, 0) 100%
+        );
+        z-index: -1;
+        pointer-events: none;
       }
 
       .modal-header h2 {
@@ -367,34 +495,18 @@ export class HomeSettingsManager {
         font-weight: 600;
         color: white;
         text-align: center;
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
+        flex: 1;
       }
 
-      .modal-cancel,
-      .modal-done {
-        background: none;
-        border: none;
-        color: #ffaf00;
-        font-size: 16px;
-        font-weight: 400;
-        cursor: pointer;
-        padding: 8px 0;
-        min-width: 50px;
-        text-align: center;
-      }
-
-      .modal-done {
-        font-weight: 600;
+      /* Modal-specific button positioning */
+      .modal-header .modal-cancel,
+      .modal-header .modal-done {
+        z-index: 2;
       }
 
       .modal-body {
-        flex: 1;
-        overflow-y: auto;
-        overflow-x: visible;
         padding: 0;
-        min-height: 0;
+        padding-bottom: 20px;
       }
 
       .settings-section {
@@ -415,7 +527,6 @@ export class HomeSettingsManager {
         font-weight: 400;
         letter-spacing: 0.5px;
         color: rgba(255, 255, 255, 0.6);
-        text-transform: uppercase;
       }
       .settings-section-description {
         margin: 8px 0 0 0;
@@ -470,8 +581,8 @@ export class HomeSettingsManager {
         width: 100%;
         box-sizing: border-box;
         padding: 12px 16px;
-        background: rgba(44, 44, 46, 0.8);
-        border: 1px solid rgba(84, 84, 88, 0.3);
+        background: rgba(39, 39, 39, 0.8);
+        border: 1px solid rgba(84, 84, 88, 0.8);
         border-radius: 8px;
         color: white;
         font-size: 14px;
@@ -494,7 +605,7 @@ export class HomeSettingsManager {
         left: 0;
         right: 0;
         background: rgba(44, 44, 46, 0.95);
-        border: 1px solid rgba(84, 84, 88, 0.3);
+        border: 1px solid rgba(84, 84, 88, 0.8);
         border-radius: 8px;
         max-height: 200px;
         overflow-y: auto;
@@ -613,6 +724,45 @@ export class HomeSettingsManager {
           padding: 16px;
         }
       }
+      
+      /* Extra small / accessibility screens */
+      @media (max-width: 359px) {
+        .modal-content {
+          height: calc(100dvh - env(safe-area-inset-top) - 10px);
+        }
+        
+        .modal-header h2 {
+          font-size: 16px;
+        }
+        
+        .settings-section {
+          padding: 12px;
+        }
+        
+        .setting-item-description {
+          font-size: 12px;
+        }
+        
+        .option-text {
+          font-size: 15px;
+        }
+        
+        .wallpaper-preview-image {
+          width: 100px;
+          height: 160px;
+        }
+      }
+      
+      /* Reduce motion for accessibility */
+      @media (prefers-reduced-motion: reduce) {
+        .modal-content,
+        .selected-entities,
+        .selected-entity-chip,
+        .ui-setting-toggle,
+        .toggle-switch {
+          transition: none !important;
+        }
+      }
 
       /* Background Settings Styles */
       .wallpaper-options {
@@ -624,7 +774,7 @@ export class HomeSettingsManager {
         justify-content: space-between;
         align-items: center;
         padding: 12px 0;
-        border-bottom: 1px solid rgba(84, 84, 88, 0.3);
+        border-bottom: 1px solid rgba(84, 84, 88, 0.8);
         cursor: pointer;
         transition: background-color 0.2s ease;
         height: 25px;
@@ -662,36 +812,70 @@ export class HomeSettingsManager {
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
+      /* iOS 26 Flat Toggle Switch */
       .ui-setting-toggle {
         width: 51px;
-        height: 31px;
-        background: rgba(120, 120, 128, 0.16);
-        border-radius: 16px;
+        height: 22px;
+        background: rgba(60, 60, 67, 0.45);
+        border-radius: 11px;
         position: relative;
-        transition: background-color 0.3s ease;
+        transition: background-color 0.25s ease;
         cursor: pointer;
         border: none;
         outline: none;
       }
 
       .ui-setting-toggle.active {
-        background: #34C759;
+        background: #30D158;
       }
 
       .toggle-switch {
         width: 27px;
-        height: 27px;
+        height: 18px;
         background: white;
-        border-radius: 50%;
+        border-radius: 9px;
         position: absolute;
         top: 2px;
         left: 2px;
         transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       }
 
       .ui-setting-toggle.active .toggle-switch {
         transform: translateX(20px);
+      }
+
+      /* Loading state styles */
+      .apple-home-settings-modal.saving .modal-content {
+        pointer-events: none;
+      }
+
+      .apple-home-settings-modal.saving .modal-done,
+      .apple-home-settings-modal.saving .modal-cancel {
+        pointer-events: none;
+        opacity: 0.5;
+      }
+
+      .modal-done .save-spinner {
+        display: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      .apple-home-settings-modal.saving .modal-done ha-icon {
+        display: none;
+      }
+
+      .apple-home-settings-modal.saving .modal-done .save-spinner {
+        display: block;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
     `;
     
@@ -772,8 +956,22 @@ export class HomeSettingsManager {
   private showAutocompleteResults(query: string, resultsContainer: HTMLElement, setting: keyof HomeSettingsData) {
     const alreadySelected = this.tempSettings[setting];
     
+    // Use the appropriate entity list based on setting type
+    let entityList: any[];
+    if (setting === 'extraAccessories') {
+      entityList = this.allEntitiesForInclusion;
+    } else if (setting === 'favoriteAccessories') {
+      // For favorites, include both available entities AND extra accessories
+      // This allows users to set manually added entities as favorites
+      const extraAccessoryIds = new Set(this.tempSettings.extraAccessories);
+      const includedFromOtherList = this.allEntitiesForInclusion.filter(e => extraAccessoryIds.has(e.entity_id));
+      entityList = [...this.availableEntities, ...includedFromOtherList];
+    } else {
+      entityList = this.availableEntities;
+    }
+    
     // Filter entities based on query and exclude already selected ones
-    let filteredEntities = this.availableEntities.filter(entity => {
+    let filteredEntities = entityList.filter(entity => {
       const matchesQuery = query === '' || 
         entity.friendly_name.toLowerCase().includes(query) ||
         entity.entity_id.toLowerCase().includes(query);
@@ -805,6 +1003,16 @@ export class HomeSettingsManager {
         }
         // Only show available entities (not unavailable, unknown, etc.)
         const isAvailable = entity.state && !['unavailable', 'unknown', 'none', 'null', ''].includes(entity.state.toLowerCase());
+        if (!isAvailable) {
+          return false;
+        }
+      }
+      
+      // For extraAccessories, only show entities that are not already part of the supported domains
+      // (those are already in the dashboard)
+      if (setting === 'extraAccessories') {
+        // Only show available entities
+        const isAvailable = entity.state && !['unavailable', 'unknown'].includes(entity.state.toLowerCase());
         if (!isAvailable) {
           return false;
         }
@@ -905,7 +1113,12 @@ export class HomeSettingsManager {
     if (selectedContainer) {
       const settingValue = this.tempSettings[setting];
       if (Array.isArray(settingValue)) {
-        selectedContainer.innerHTML = this.renderSelectedEntities(settingValue);
+        // Use the appropriate render method for extra accessories
+        if (setting === 'extraAccessories') {
+          selectedContainer.innerHTML = this.renderSelectedEntitiesForInclusion(settingValue);
+        } else {
+          selectedContainer.innerHTML = this.renderSelectedEntities(settingValue);
+        }
         this.setupRemoveButtons();
       }
     }
@@ -962,36 +1175,50 @@ export class HomeSettingsManager {
   }
 
   private async saveAndClose() {
+    // Show loading state immediately
+    if (this.modal) {
+      this.modal.classList.add('saving');
+    }
+
     // Check if changes require a full re-render (entity list changes) vs just DOM updates (UI/background)
     this.requiresRender = 
       JSON.stringify(this.settings.favoriteAccessories) !== JSON.stringify(this.tempSettings.favoriteAccessories) ||
       JSON.stringify(this.settings.excludedFromDashboard) !== JSON.stringify(this.tempSettings.excludedFromDashboard) ||
       JSON.stringify(this.settings.excludedFromHome) !== JSON.stringify(this.tempSettings.excludedFromHome) ||
       JSON.stringify(this.settings.includedSwitches) !== JSON.stringify(this.tempSettings.includedSwitches) ||
-      this.settings.showSwitches !== this.tempSettings.showSwitches
+      JSON.stringify(this.settings.extraAccessories) !== JSON.stringify(this.tempSettings.extraAccessories) ||
+      this.settings.showSwitches !== this.tempSettings.showSwitches;
     
     // Apply temporary settings to actual settings
     this.settings.favoriteAccessories = [...this.tempSettings.favoriteAccessories];
     this.settings.excludedFromDashboard = [...this.tempSettings.excludedFromDashboard];
     this.settings.excludedFromHome = [...this.tempSettings.excludedFromHome];
     this.settings.includedSwitches = [...this.tempSettings.includedSwitches];
+    this.settings.extraAccessories = [...this.tempSettings.extraAccessories];
     this.settings.backgroundType = this.tempSettings.backgroundType;
     this.settings.customBackground = this.tempSettings.customBackground;
     this.settings.presetBackground = this.tempSettings.presetBackground;
     this.settings.hideHeader = this.tempSettings.hideHeader;
     this.settings.hideSidebar = this.tempSettings.hideSidebar;
     this.settings.showSwitches = this.tempSettings.showSwitches;
-    
-    // Wait for settings to be saved before proceeding
-    await this.saveSettings();
-    
-    // Start closing the modal with fade effect
+
+    // Start modal fade immediately (while save happens in parallel)
     if (this.modal) {
       this.modal.style.transition = 'opacity 0.3s ease-out';
       this.modal.style.opacity = '0';
     }
     
-    // Wait for modal to fully fade before doing anything else
+    // Run save operation (this is the potentially slow part)
+    try {
+      await this.saveSettings();
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
+
+    // Apply visual changes immediately (these are fast DOM operations)
+    this.applyVisualChanges();
+    
+    // Clean up modal after fade animation
     setTimeout(() => {
       // Restore background scrolling
       document.body.style.overflow = '';
@@ -1003,43 +1230,18 @@ export class HomeSettingsManager {
       }
       this.modal = undefined;
       
-      // Only trigger callback after everything is cleaned up
-      // Check if we actually need a re-render (entity list changes vs just UI/background changes)
+      // Trigger callback if re-render is needed
       if (this.onSaveCallback && this.requiresRender) {
-        setTimeout(() => {
-          this.onSaveCallback();
-        }, 100);
+        this.onSaveCallback();
       }
-    }, 350);
+    }, 300);
   }
 
-  private async saveSettings() {
-    // Update home section with favorites and exclusions
-    const home = this.customizationManager.getCustomization('home') || {};
-    home.favorites = this.settings.favoriteAccessories;
-    home.excluded_from_dashboard = this.settings.excludedFromDashboard;
-    home.excluded_from_home = this.settings.excludedFromHome;
-    home.included_switches = this.settings.includedSwitches;
-    home.show_switches = this.settings.showSwitches;
-    await this.customizationManager.setCustomization('home', home);
-    
-    // Update UI section
-    const ui = this.customizationManager.getCustomization('ui') || {};
-    ui.hide_header = this.settings.hideHeader;
-    ui.hide_sidebar = this.settings.hideSidebar;
-    await this.customizationManager.setCustomization('ui', ui);
-
-    // Update background section
-    const backgroundConfig = {
-      type: this.settings.backgroundType,
-      value: this.settings.backgroundType === 'custom' 
-        ? this.settings.customBackground 
-        : this.settings.presetBackground
-    };
-    await this.customizationManager.setCustomization('background', backgroundConfig);
-    
-    // Apply background immediately using BackgroundManager's setBackground method
-    // Convert storage format to BackgroundManager's expected format
+  /**
+   * Apply visual changes immediately without waiting for storage
+   */
+  private applyVisualChanges(): void {
+    // Apply background immediately using applyBackgroundOnly (no save)
     const backgroundManagerConfig = {
       type: this.settings.backgroundType,
       backgroundImage: this.settings.backgroundType === 'custom' 
@@ -1047,18 +1249,41 @@ export class HomeSettingsManager {
         : this.settings.presetBackground
     };
     const backgroundManager = new BackgroundManager(this.customizationManager);
-    await backgroundManager.setBackground(backgroundManagerConfig);
+    backgroundManager.applyBackgroundOnly(backgroundManagerConfig);
     
     // Apply UI settings immediately using HomeAssistantUIManager
     const uiManager = HomeAssistantUIManager.initializeWithCustomizations(this.customizationManager);
-    // Force reapplication of dashboard UI settings
     uiManager.reapplyDashboardSettings();
+  }
+
+  private async saveSettings() {
+    // Prepare all section updates
+    const home = this.customizationManager.getCustomization('home') || {};
+    home.favorites = this.settings.favoriteAccessories;
+    home.excluded_from_dashboard = this.settings.excludedFromDashboard;
+    home.excluded_from_home = this.settings.excludedFromHome;
+    home.included_switches = this.settings.includedSwitches;
+    home.extra_accessories = this.settings.extraAccessories;
+    home.show_switches = this.settings.showSwitches;
     
-    // Background and UI changes are handled above via DOM manipulation
-    // No need for global refresh as BackgroundManager handles background changes directly
-    // and HomeAssistantUIManager handles UI changes directly
+    const ui = this.customizationManager.getCustomization('ui') || {};
+    ui.hide_header = this.settings.hideHeader;
+    ui.hide_sidebar = this.settings.hideSidebar;
+
+    const background = {
+      type: this.settings.backgroundType,
+      value: this.settings.backgroundType === 'custom' 
+        ? this.settings.customBackground 
+        : this.settings.presetBackground
+    };
     
-    }
+    // Single batch save operation instead of 3-4 separate saves
+    await this.customizationManager.batchSetCustomizations({
+      home,
+      ui,
+      background
+    });
+  }
 
   private setupBackgroundEventListeners() {
     if (!this.modal) return;
@@ -1188,12 +1413,13 @@ export class HomeSettingsManager {
       <div class="modal-backdrop"></div>
       <div class="modal-content presets-content">
         <div class="modal-header">
-          <button class="modal-back">
-            <ha-icon icon="mdi:chevron-left"></ha-icon>
-            <span>${localize('ui_actions.back')}</span>
+          <button class="modal-cancel ${LiquidGlassClasses.modalCancel}">
+            <ha-icon icon="mdi:close"></ha-icon>
           </button>
           <h2>${localize('ui_actions.choose_wallpaper')}</h2>
-          <div class="modal-spacer"></div>
+          <button class="modal-done ${LiquidGlassClasses.modalDone}">
+            <ha-icon icon="mdi:check"></ha-icon>
+          </button>
         </div>
         <div class="modal-body">
           <div class="presets-grid">
@@ -1266,16 +1492,13 @@ export class HomeSettingsManager {
         max-width: 90vw;
         max-height: 85vh;
         background: rgba(28, 28, 30, 1);
-        backdrop-filter: blur(40px);
-        -webkit-backdrop-filter: blur(40px);
         border-radius: 16px;
-        overflow: visible;
+        overflow-y: auto;
+        overflow-x: hidden;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
         transform: scale(0.9);
         opacity: 0;
         transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        display: flex;
-        flex-direction: column;
       }
 
       .presets-selection-modal.show .presets-content {
@@ -1284,14 +1507,32 @@ export class HomeSettingsManager {
       }
 
       .presets-content .modal-header {
-        background: rgba(44, 44, 46, 0.8);
-        border-bottom: 0.5px solid rgba(84, 84, 88, 0.3);
+        background: transparent;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 10px;
-        position: relative;
-        border-radius: 16px 16px 0 0;
+        padding: 12px 16px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .presets-content .modal-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: -30px;
+        background: linear-gradient(
+          to bottom,
+          rgba(28, 28, 30, 1) 0%,
+          rgba(28, 28, 30, 0.95) 30%,
+          rgba(28, 28, 30, 0.7) 60%,
+          rgba(28, 28, 30, 0) 100%
+        );
+        z-index: -1;
+        pointer-events: none;
       }
 
       .presets-content .modal-header h2 {
@@ -1300,16 +1541,12 @@ export class HomeSettingsManager {
         font-weight: 600;
         color: white;
         text-align: center;
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
+        flex: 1;
       }
 
       .presets-content .modal-body {
-        flex: 1;
-        overflow-y: auto;
         padding: 20px;
-        border-radius: 0 0 16px 16px;
+        padding-bottom: 20px;
       }
 
       .presets-grid {
@@ -1374,31 +1611,10 @@ export class HomeSettingsManager {
         color: #ffffff;
       }
 
-      .presets-content .modal-back {
-        background: none;
-        border: none;
-        color: #ffaf00;
-        font-size: 16px;
-        font-weight: 400;
-        cursor: pointer;
-        padding: 8px 0;
-        min-width: 50px;
-        text-align: left;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-
-      .presets-content .modal-back ha-icon {
-        --mdc-icon-size: 30px;
-      }
-
-      .presets-content .modal-back:hover {
-        opacity: 0.8;
-      }
-
-      .presets-content .modal-spacer {
-        min-width: 50px;
+      /* Presets modal button positioning */
+      .presets-content .modal-cancel,
+      .presets-content .modal-done {
+        z-index: 2;
       }
 
       @media (max-width: 480px) {
@@ -1436,9 +1652,9 @@ export class HomeSettingsManager {
       customBackground: this.tempSettings.customBackground
     };
 
-    // Back button
-    const backBtn = presetsModal.querySelector('.modal-back');
-    backBtn?.addEventListener('click', () => {
+    // Cancel button (X)
+    const cancelBtn = presetsModal.querySelector('.modal-cancel');
+    cancelBtn?.addEventListener('click', () => {
       // Revert temp settings to original state
       this.tempSettings.backgroundType = originalSettings.backgroundType;
       this.tempSettings.presetBackground = originalSettings.presetBackground;
@@ -1447,6 +1663,14 @@ export class HomeSettingsManager {
       // Update the main modal preview to show reverted state
       this.updateCurrentWallpaperPreview();
       
+      this.closePresetsModal(presetsModal);
+    });
+
+    // Done button (checkmark) - save and close
+    const doneBtn = presetsModal.querySelector('.modal-done');
+    doneBtn?.addEventListener('click', () => {
+      // Keep current temp settings (already set by preset selection)
+      this.updateCurrentWallpaperPreview();
       this.closePresetsModal(presetsModal);
     });
 
@@ -1464,7 +1688,7 @@ export class HomeSettingsManager {
       this.closePresetsModal(presetsModal);
     });
 
-    // Preset selection - now auto-closes after selection
+    // Preset selection - select but don't close (user clicks checkmark to confirm)
     const presetOptions = presetsModal.querySelectorAll('.preset-option');
     presetOptions.forEach(option => {
       option.addEventListener('click', (e) => {
@@ -1476,11 +1700,14 @@ export class HomeSettingsManager {
           this.tempSettings.backgroundType = 'preset';
           this.tempSettings.presetBackground = preset;
           
-          // Immediately update the main modal preview
-          this.updateCurrentWallpaperPreview();
+          // Update visual selection
+          presetsModal.querySelectorAll('.preset-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+          target.classList.add('selected');
           
-          // Close the presets modal automatically
-          this.closePresetsModal(presetsModal);
+          // Update the main modal preview
+          this.updateCurrentWallpaperPreview();
         }
       });
     });

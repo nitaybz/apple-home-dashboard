@@ -112,7 +112,8 @@ export class DashboardConfig {
     'media_player': DeviceGroup.MEDIA,
     'camera': DeviceGroup.SECURITY,
     'binary_sensor': DeviceGroup.SECURITY, // Motion, occupancy, contact sensors
-    'sensor': DeviceGroup.SECURITY
+    'sensor': DeviceGroup.SECURITY,
+    'vacuum': DeviceGroup.OTHER // Robot vacuums
   };
 
   // =====================================================================
@@ -124,7 +125,7 @@ export class DashboardConfig {
    */
   static readonly SUPPORTED_DOMAINS = [
     'light', 'switch', 'cover', 'climate', 'fan', 'media_player', 
-    'lock', 'alarm_control_panel', 'scene', 'script', 'camera'
+    'lock', 'alarm_control_panel', 'scene', 'script', 'camera', 'vacuum'
   ] as const;
 
   /**
@@ -147,7 +148,7 @@ export class DashboardConfig {
   /**
    * Domains that should be displayed as tall cards by default
    */
-  static readonly DEFAULT_TALL_DOMAINS = ['climate', 'lock', 'alarm_control_panel', 'camera'] as const;
+  static readonly DEFAULT_TALL_DOMAINS = ['climate', 'lock', 'alarm_control_panel', 'camera', 'vacuum'] as const;
 
   // =====================================================================
   // STYLING CONSTANTS
@@ -202,7 +203,7 @@ export class DashboardConfig {
    * @returns The device group or undefined if entity should be hidden
    */
   static getDeviceGroup(domain: string, entityId?: string, attributes?: any, showSwitches?: boolean): DeviceGroup | undefined {
-    // Special handling for covers that might be garage doors
+    // Special handling for covers that might be garage doors or gates
     if (domain === 'cover' && entityId && attributes) {
       if (this.isGarageDoorOrGate(entityId, attributes)) {
         return DeviceGroup.SECURITY;
@@ -222,6 +223,57 @@ export class DashboardConfig {
       } else {
         return undefined; // Hide non-outlet switches when setting is explicitly disabled
       }
+    }
+    
+    // Special handling for sensors based on device_class
+    if (domain === 'sensor' && attributes) {
+      const deviceClass = attributes.device_class;
+      const unitOfMeasurement = attributes.unit_of_measurement;
+      
+      // Temperature sensors go to Climate
+      if (deviceClass === 'temperature' || unitOfMeasurement === '°C' || unitOfMeasurement === '°F') {
+        return DeviceGroup.CLIMATE;
+      }
+      // Humidity sensors go to Climate
+      if (deviceClass === 'humidity') {
+        return DeviceGroup.CLIMATE;
+      }
+      // Illuminance/light sensors go to Lighting
+      if (deviceClass === 'illuminance' || unitOfMeasurement === 'lx') {
+        return DeviceGroup.LIGHTING;
+      }
+      // Battery sensors go to Other (or could be shown anywhere)
+      if (deviceClass === 'battery') {
+        return DeviceGroup.OTHER;
+      }
+      // Default sensors to Security (for things like smoke, gas, etc.)
+      return DeviceGroup.SECURITY;
+    }
+    
+    // Special handling for binary_sensors based on device_class
+    if (domain === 'binary_sensor' && attributes) {
+      const deviceClass = attributes.device_class;
+      
+      // Motion and occupancy could be considered security or climate-related
+      // Keep them in Security for now as they are typically security-related
+      if (deviceClass === 'motion' || deviceClass === 'occupancy') {
+        return DeviceGroup.SECURITY;
+      }
+      // Door, window, opening sensors are security
+      if (deviceClass === 'door' || deviceClass === 'window' || deviceClass === 'opening' || 
+          deviceClass === 'garage_door' || deviceClass === 'lock') {
+        return DeviceGroup.SECURITY;
+      }
+      // Smoke, gas, carbon monoxide are security
+      if (deviceClass === 'smoke' || deviceClass === 'gas' || deviceClass === 'carbon_monoxide') {
+        return DeviceGroup.SECURITY;
+      }
+      // Light sensors (binary) go to Lighting
+      if (deviceClass === 'light') {
+        return DeviceGroup.LIGHTING;
+      }
+      // Default binary sensors to Security
+      return DeviceGroup.SECURITY;
     }
     
     return this.DOMAIN_TO_GROUP[domain];
@@ -376,6 +428,14 @@ export class DashboardConfig {
         return entityState === 'unlocked' ? 'mdi:lock-open' : 'mdi:lock';
       case 'alarm_control_panel':
         return 'mdi:alarm-light';
+      case 'button':
+        return 'mdi:gesture-tap-button';
+      case 'input_boolean':
+        return entityState === 'on' ? 'mdi:toggle-switch' : 'mdi:toggle-switch-off';
+      case 'input_button':
+        return 'mdi:gesture-tap-button';
+      case 'vacuum':
+        return entityState === 'cleaning' ? 'mdi:robot-vacuum' : 'mdi:robot-vacuum';
       default:
         return 'mdi:help-circle';
     }
@@ -530,6 +590,18 @@ export class DashboardConfig {
          // Sensors are always considered active for status display
         result = true;
         break;
+      case 'input_boolean':
+        result = entityState === 'on';
+        break;
+      case 'button':
+      case 'input_button':
+        // Buttons are always shown as actionable (similar to scenes)
+        result = true;
+        break;
+      case 'vacuum':
+        // Vacuum is active when cleaning, returning, or any state other than docked/idle/off
+        result = ['cleaning', 'returning', 'paused'].includes(entityState);
+        break;
       default:
         result = ['on', 'active', 'enabled', 'open', 'unlocked'].includes(entityState.toLowerCase());
     }
@@ -590,6 +662,17 @@ export class DashboardConfig {
       case 'sensor':
         return this.getSensorStateText(entityState, attributes);
 
+      case 'input_boolean':
+        return entityState === 'on' ? localize('status.on') : localize('status.off');
+
+      case 'button':
+      case 'input_button':
+        // Buttons show when they were last pressed or just 'Press' if never pressed
+        return localize('status.press') || 'Press';
+
+      case 'vacuum':
+        return this.getVacuumStateText(entityState, attributes);
+
       default:
         return entityState === 'on' ? localize('status.on') : localize('status.off');
     }
@@ -649,6 +732,30 @@ export class DashboardConfig {
         return localize('status.on');
       default:
         return localize('status.off');
+    }
+  }
+
+  /**
+   * Get vacuum-specific state text
+   */
+  private static getVacuumStateText(entityState: string, attributes: any): string {
+    switch (entityState) {
+      case 'cleaning':
+        return localize('status.cleaning');
+      case 'docked':
+        return localize('status.docked');
+      case 'returning':
+        return localize('status.returning');
+      case 'paused':
+        return localize('status.paused');
+      case 'idle':
+        return localize('status.idle');
+      case 'error':
+        return localize('status.error');
+      case 'off':
+        return localize('status.off');
+      default:
+        return entityState.charAt(0).toUpperCase() + entityState.slice(1);
     }
   }
 

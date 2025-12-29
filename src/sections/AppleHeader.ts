@@ -8,6 +8,7 @@ import { DeviceGroup } from '../config/DashboardConfig';
 import { EntityState } from '../types/types';
 import { localize } from '../utils/LocalizationService';
 import { RTLHelper } from '../utils/RTLHelper';
+import { injectLiquidGlassStyles, LiquidGlassClasses, liquidGlassCSS } from '../utils/LiquidGlassStyles';
 
 export interface HeaderConfig {
   title: string;
@@ -82,29 +83,29 @@ export class AppleHeader {
     if (this.currentConfig.showBackButton) {
       return false;
     }
-    
+
     // Check current UI state
     const headerVisible = this.uiManager.isHeaderVisible();
     const headerHidden = !headerVisible;
     const sidebarHidden = !this.uiManager.isSidebarVisible();
-    
+
     // Also check customization settings (for cases where UI hasn't been applied yet)
     let customHeaderHidden = false;
     let customSidebarHidden = false;
-    
+
     if (this.customizationManager) {
       customHeaderHidden = this.customizationManager.isHeaderHidden();
       customSidebarHidden = this.customizationManager.isSidebarHidden();
     }
-    
+
     // If HA header is visible, don't show our sidebar button since HA already provides menu access
     if (headerVisible && !customHeaderHidden) {
       return false;
     }
-    
+
     // Check if we're on mobile
     const isMobile = window.innerWidth <= 768;
-    
+
     if (isMobile) {
       // On mobile: show when header is hidden (user needs access to sidebar overlay)
       return headerHidden || customHeaderHidden;
@@ -119,13 +120,13 @@ export class AppleHeader {
    * Initialize the header with configuration
    */
   async init(container: HTMLElement, config: HeaderConfig) {
-    
+
     const containerChanged = this.container !== container;
     // Better config change detection - check before updating currentConfig
     const configChanged = JSON.stringify(this.currentConfig) !== JSON.stringify(config);
-    
+
     this.container = container;
-    
+
     // Only recreate if container changed or header doesn't exist
     if (containerChanged || !this.headerElement) {
       this.cleanup();
@@ -137,7 +138,7 @@ export class AppleHeader {
       this.reconfigure(config);
       this.currentConfig = { ...config }; // Update config after reconfiguring
     }
-    
+
   }
 
   /**
@@ -148,17 +149,17 @@ export class AppleHeader {
     if (this.menuButton) {
       this.menuButton.style.display = config.showMenu ? 'flex' : 'none';
     }
-    
+
     // Update title in scrolled header if needed
     if (this.scrolledTitleElement && config.title !== this.currentConfig.title) {
       this.scrolledTitleElement.textContent = config.title;
     }
-    
+
     // Clear chips if switching from group to home page
     if (!config.isGroupPage && this.scrolledChipsContainer) {
       this.scrolledChipsContainer.innerHTML = '';
     }
-    
+
   }
 
   /**
@@ -169,9 +170,9 @@ export class AppleHeader {
     if (this.currentConfig.title === title) {
       return;
     }
-    
+
     this.currentConfig.title = title;
-    
+
     // Update scrolled title element if it exists
     if (this.scrolledTitleElement) {
       this.scrolledTitleElement.textContent = title;
@@ -183,12 +184,12 @@ export class AppleHeader {
    */
   forceUpdateTitle(title: string) {
     this.currentConfig.title = title;
-    
+
     // Force update the DOM element regardless of previous state
     if (this.scrolledTitleElement) {
       this.scrolledTitleElement.textContent = title;
     }
-    
+
     // Also update any other title elements that might exist
     const titleElements = this.headerElement?.querySelectorAll('.apple-header-scrolled-title');
     titleElements?.forEach((element: Element) => {
@@ -200,22 +201,22 @@ export class AppleHeader {
    * Set chips element for group pages
    */
   setChipsElement(chipsElement: any | null) {
-    
+
     if (chipsElement && this.headerElement) {
       // Find the header chips container
       const headerChipsContainer = this.headerElement.querySelector('.apple-header-scrolled-chips') as HTMLElement;
-      
-      
+
+
       if (headerChipsContainer) {
-        
+
         // Create a new AppleChips instance for the header
-        
+
         if (chipsElement.isConfigured && chipsElement.isConfigured() && chipsElement.hass) {
           const headerChips = new AppleChips(headerChipsContainer, this.customizationManager);
           headerChips.setConfig(chipsElement.getConfig());
           headerChips.hass = chipsElement.hass;
           headerChips.setActiveGroup(chipsElement.getActiveGroup());
-          
+
         } else {
         }
       } else {
@@ -260,7 +261,7 @@ export class AppleHeader {
         return haPanelLovelace;
       }
     }
-    
+
     // Fallback to body
     const body = document.body;
     return body;
@@ -273,7 +274,7 @@ export class AppleHeader {
     if (!this.headerElement || !this.currentConfig.isGroupPage) {
       return;
     }
-    
+
     const container = this.findWidthContainer();
     if (!container) {
       // Simple fallback: assume 256px sidebar
@@ -288,9 +289,9 @@ export class AppleHeader {
       this.headerElement.style.top = '0px';
       return;
     }
-    
+
     const rect = container.getBoundingClientRect();
-    
+
     // Apply positioning - RTL aware
     if (RTLHelper.isRTL()) {
       this.headerElement.style.right = `${window.innerWidth - rect.right}px`;
@@ -302,7 +303,7 @@ export class AppleHeader {
     this.headerElement.style.width = `${rect.width}px`;
     this.headerElement.style.top = this.getHomeAssistantHeaderHeight() + 'px';
   }
-  
+
   /**
    * Wait for Home Assistant interface to be ready
    */
@@ -310,16 +311,16 @@ export class AppleHeader {
     return new Promise((resolve) => {
       let attempts = 0;
       const maxAttempts = 100; // 5 seconds max wait
-      
+
       const checkInterface = () => {
         attempts++;
-        
+
         const homeAssistantElement = document.querySelector('home-assistant');
         const homeAssistantMain = homeAssistantElement?.shadowRoot?.querySelector('home-assistant-main');
         const haDrawer = homeAssistantMain?.shadowRoot?.querySelector('ha-drawer');
         const haPanelLovelace = haDrawer?.querySelector('ha-panel-lovelace');
         const huiRoot = haPanelLovelace?.shadowRoot?.querySelector('hui-root');
-        
+
         if (homeAssistantElement && homeAssistantMain && haDrawer && haPanelLovelace && huiRoot) {
           // Additional check: make sure hui-root has its shadow DOM
           if (huiRoot.shadowRoot) {
@@ -327,16 +328,16 @@ export class AppleHeader {
             return;
           }
         }
-        
+
         if (attempts >= maxAttempts) {
           // Timeout - resolve anyway to prevent hanging
           resolve();
           return;
         }
-        
+
         setTimeout(checkInterface, 50);
       };
-      
+
       checkInterface();
     });
   }
@@ -348,22 +349,22 @@ export class AppleHeader {
     try {
       const homeAssistantElement = document.querySelector('home-assistant') as HTMLElement;
       if (!homeAssistantElement?.shadowRoot) return 0;
-      
+
       const homeAssistantMain = homeAssistantElement.shadowRoot.querySelector('home-assistant-main') as HTMLElement;
       if (!homeAssistantMain?.shadowRoot) return 0;
-      
+
       const haDrawer = homeAssistantMain.shadowRoot.querySelector('ha-drawer') as HTMLElement;
       if (!haDrawer) return 0;
-      
+
       const haPanelLovelace = haDrawer.querySelector('ha-panel-lovelace') as HTMLElement;
       if (!haPanelLovelace?.shadowRoot) return 0;
-      
+
       const huiRoot = haPanelLovelace.shadowRoot.querySelector('hui-root') as HTMLElement;
       if (!huiRoot?.shadowRoot) return 0;
-      
+
       const header = huiRoot.shadowRoot.querySelector('.header') as HTMLElement;
       if (!header) return 0;
-      
+
       const rect = header.getBoundingClientRect();
       return rect.height;
     } catch (error) {
@@ -390,18 +391,17 @@ export class AppleHeader {
 
     // Check if we have a permanent header element to populate
     const existingHeader = this.container.querySelector('.apple-home-header.permanent-header') as HTMLElement;
-    
+
     if (existingHeader) {
       // Populate the existing header element
       existingHeader.innerHTML = `
         <div class="apple-header-content">
           ${this.currentConfig.showBackButton ? `
-            <button class="apple-header-back-button">
+            <button class="apple-header-back-button ${LiquidGlassClasses.headerButton}">
               <ha-icon icon="${RTLHelper.getBackIcon()}"></ha-icon>
-              <span>${localize('ui_actions.home')}</span>
             </button>
           ` : this.shouldShowSidebarButton() ? `
-            <button class="apple-header-sidebar-button">
+            <button class="apple-header-sidebar-button ${LiquidGlassClasses.headerButton}">
               <ha-icon icon="mdi:menu"></ha-icon>
             </button>
           ` : ''}
@@ -412,7 +412,7 @@ export class AppleHeader {
             <div class="apple-header-scrolled-chips"></div>
           </div>
           ${this.currentConfig.showMenu ? `
-            <button class="apple-header-menu-button">
+            <button class="apple-header-menu-button ${LiquidGlassClasses.headerButton}">
               ${this.getMenuButtonContent()}
             </button>
             <div class="apple-header-dropdown">
@@ -421,10 +421,10 @@ export class AppleHeader {
           ` : ''}
         </div>
       `;
-      
+
       // Use the existing header as our header element
       this.headerElement = existingHeader;
-      
+
       // Add RTL class handling
       if (RTLHelper.isRTL()) {
         this.headerElement.classList.add('rtl');
@@ -433,7 +433,7 @@ export class AppleHeader {
         this.headerElement.classList.add('ltr');
         this.headerElement.classList.remove('rtl');
       }
-      
+
       // Add group-page class if this is a group page
       if (this.currentConfig.isGroupPage) {
         this.headerElement.classList.add('group-page');
@@ -456,12 +456,11 @@ export class AppleHeader {
         <div class="apple-home-header ${RTLHelper.isRTL() ? 'rtl' : 'ltr'}">
           <div class="apple-header-content">
             ${this.currentConfig.showBackButton ? `
-              <button class="apple-header-back-button">
+              <button class="apple-header-back-button ${LiquidGlassClasses.headerButton}">
                 <ha-icon icon="${RTLHelper.getBackIcon()}"></ha-icon>
-                <span>${localize('ui_actions.home')}</span>
               </button>
             ` : this.shouldShowSidebarButton() ? `
-              <button class="apple-header-sidebar-button">
+              <button class="apple-header-sidebar-button ${LiquidGlassClasses.headerButton}">
                 <ha-icon icon="mdi:menu"></ha-icon>
               </button>
             ` : ''}
@@ -472,7 +471,7 @@ export class AppleHeader {
               <div class="apple-header-scrolled-chips"></div>
             </div>
             ${this.currentConfig.showMenu ? `
-              <button class="apple-header-menu-button">
+              <button class="apple-header-menu-button ${LiquidGlassClasses.headerButton}">
                 ${this.getMenuButtonContent()}
               </button>
               <div class="apple-header-dropdown">
@@ -485,7 +484,7 @@ export class AppleHeader {
 
       // Insert the HTML structure
       this.container.insertAdjacentHTML('afterbegin', headerHTML);
-      
+
       // Get reference to the created element
       this.headerElement = this.container.querySelector('.apple-home-header') as HTMLElement;
     }
@@ -511,11 +510,11 @@ export class AppleHeader {
     // Get references to the elements (whether existing or newly created)
     this.scrolledTitleElement = this.headerElement.querySelector('.apple-header-scrolled-title') as HTMLElement;
     this.scrolledChipsContainer = this.headerElement.querySelector('.apple-header-scrolled-chips') as HTMLElement;
-    
+
     if (this.currentConfig.showMenu) {
       this.menuButton = this.headerElement.querySelector('.apple-header-menu-button') as HTMLButtonElement;
       this.dropdown = this.headerElement.querySelector('.apple-header-dropdown') as HTMLElement;
-      
+
       // Load dropdown content asynchronously
       if (this.dropdown) {
         this.dropdown.innerHTML = await this.getDropdownContent();
@@ -524,21 +523,21 @@ export class AppleHeader {
 
     // Add styles
     this.addStyles();
-    
+
     // Set the HA header height CSS custom property for sticky positioning
     this.updateHAHeaderHeight();
-    
+
     // Wait for HA interface and set up proper monitoring
     this.waitForHAInterface().then(() => {
       // Update header height once interface is ready
       this.updateHAHeaderHeight();
-      
+
       // Set up observers after interface is ready
       this.setupSidebarObserver();
-      
+
       if (this.currentConfig.isGroupPage) {
         this.updateFixedHeaderPosition();
-        
+
         // Additional delayed check for refresh scenarios
         setTimeout(() => {
           this.updateHAHeaderHeight();
@@ -551,19 +550,19 @@ export class AppleHeader {
         this.updateSidebarButtonVisibility();
       }, 300);
     });
-    
+
   }
 
   private getMenuButtonContent(): string {
     if (this.editMode) {
-      return `<span class="done-text">${localize('ui_actions.done')}</span>`;
+      return `<ha-icon icon="mdi:check"></ha-icon>`;
     }
+    // iOS 26 Liquid Glass style - larger dots without circle outline
     return `
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <circle cx="6" cy="10" r="1" fill="currentColor"/>
-        <circle cx="10" cy="10" r="1" fill="currentColor"/>
-        <circle cx="14" cy="10" r="1" fill="currentColor"/>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="6" cy="12" r="2" fill="currentColor"/>
+        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        <circle cx="18" cy="12" r="2" fill="currentColor"/>
       </svg>
     `;
   }
@@ -583,34 +582,35 @@ export class AppleHeader {
     // Check if we're on mobile to conditionally hide sidebar toggle
     const isMobile = window.innerWidth <= 768;
     const sidebarSection = isMobile ? '' : `
-      <div class="dropdown-separator"></div>
-      <div class="dropdown-item sidebar-toggle">
-        <span>${this.uiManager.getSidebarToggleText()}</span>
+      <div class="dropdown-item settings-item sidebar-toggle">
+        <span class="item-checkmark"></span>
         <ha-icon icon="${RTLHelper.isRTL() ? 'mdi:dock-right' : 'mdi:dock-left'}"></ha-icon>
+        <span>${this.uiManager.getSidebarToggleText()}</span>
       </div>`;
 
     // Get rooms section
     const roomsSection = this.getRoomsSection();
 
     return `
-      <div class="dropdown-item home-settings-item">
-        <span>${localize('ui_actions.home_settings')}</span>
+      <div class="dropdown-item settings-item home-settings-item">
+        <span class="item-checkmark"></span>
         <ha-icon icon="mdi:cog-outline"></ha-icon>
+        <span>${localize('ui_actions.home_settings')}</span>
       </div>
-      <div class="dropdown-separator"></div>
-      <div class="dropdown-item edit-item">
-        <span>${editText}</span>
+      <div class="dropdown-item settings-item edit-item">
+        <span class="item-checkmark"></span>
         <ha-icon icon="mdi:view-grid-outline"></ha-icon>
+        <span>${editText}</span>
       </div>
-      <div class="dropdown-separator"></div>
-      <div class="dropdown-item reorder-item">
-        <span>${localize('ui_actions.reorder_sections')}</span>
+      <div class="dropdown-item settings-item reorder-item">
+        <span class="item-checkmark"></span>
         <ha-icon icon="mdi:view-sequential-outline"></ha-icon>
+        <span>${localize('ui_actions.reorder_sections')}</span>
       </div>
-      <div class="dropdown-separator"></div>
-      <div class="dropdown-item header-toggle">
-        <span>${this.uiManager.getHeaderToggleText()}</span>
+      <div class="dropdown-item settings-item header-toggle">
+        <span class="item-checkmark"></span>
         <ha-icon icon="mdi:page-layout-header"></ha-icon>
+        <span>${this.uiManager.getHeaderToggleText()}</span>
       </div>${sidebarSection}${roomsSection}
     `;
   }
@@ -623,13 +623,13 @@ export class AppleHeader {
     try {
       // Get areas from hass
       const areas = this._hass.areas ? Object.values(this._hass.areas) : [];
-      
+
       // Check if there are entities without areas (Default Room)
       let hasDefaultRoom = false;
       try {
         const entities = this._hass.entities ? Object.values(this._hass.entities) : [];
         const devices = this._hass.devices ? Object.values(this._hass.devices) : [];
-        
+
         // Check if any entities would be grouped under 'no_area'
         hasDefaultRoom = entities.some((entity: any) => {
           if (!entity.area_id && entity.device_id) {
@@ -642,14 +642,14 @@ export class AppleHeader {
         // If we can't determine, assume there might be a default room
         hasDefaultRoom = true;
       }
-      
+
       // Get section order from customizations if available
       let orderedAreas = areas;
       if (this.customizationManager) {
         const customizations = this.customizationManager.getCustomizations();
         const sectionOrder = customizations.home?.sections?.order || [];
         const hiddenSections = customizations.home?.sections?.hidden || [];
-        
+
         // Filter out hidden areas and sort by order
         orderedAreas = areas
           .filter((area: any) => {
@@ -661,7 +661,7 @@ export class AppleHeader {
             const aIdB = b.area_id || b.id;
             const orderA = sectionOrder.indexOf(aIdA);
             const orderB = sectionOrder.indexOf(aIdB);
-            
+
             // If both are in order list, sort by order
             if (orderA !== -1 && orderB !== -1) {
               return orderA - orderB;
@@ -673,7 +673,7 @@ export class AppleHeader {
             // Neither in order, sort by name
             return (a.name || aIdA).localeCompare(b.name || aIdB);
           });
-        
+
         // Add Default Room if it exists and is not hidden
         if (hasDefaultRoom && !hiddenSections.includes('no_area')) {
           const defaultRoomOrder = sectionOrder.indexOf('no_area');
@@ -682,7 +682,7 @@ export class AppleHeader {
             id: 'no_area',
             name: localize('pages.default_room')
           };
-          
+
           if (defaultRoomOrder !== -1) {
             // Insert at specific position
             orderedAreas.push(defaultRoom);
@@ -691,7 +691,7 @@ export class AppleHeader {
               const aIdB = b.area_id || b.id;
               const orderA = sectionOrder.indexOf(aIdA);
               const orderB = sectionOrder.indexOf(aIdB);
-              
+
               if (orderA !== -1 && orderB !== -1) {
                 return orderA - orderB;
               }
@@ -717,14 +717,20 @@ export class AppleHeader {
         return '';
       }
 
+      // Detect current room from URL
+      const currentPath = window.location.pathname;
+      const roomMatch = currentPath.match(/room-([^/]+)$/);
+      const currentRoomId = roomMatch ? roomMatch[1] : null;
+
       // Build rooms dropdown section
       const roomItems = orderedAreas
         .map((area: any, index: number) => {
           const areaId = area.area_id || area.id;
           const areaName = area.name || areaId;
+          const isActive = currentRoomId === areaId;
           return `
-            ${index > 0 ? '<div class="dropdown-separator"></div>' : ''}
-            <div class="dropdown-item room-item" data-room-id="${areaId}">
+            <div class="dropdown-item room-item${isActive ? ' active' : ''}" data-room-id="${areaId}">
+              <span class="room-checkmark"></span>
               <span>${areaName}</span>
             </div>
           `;
@@ -774,7 +780,7 @@ export class AppleHeader {
     // Menu button click
     this.menuButton.addEventListener('click', (e: Event) => {
       e.stopPropagation();
-      
+
       if (this.editMode) {
         this.toggleEditMode();
       } else {
@@ -862,29 +868,29 @@ export class AppleHeader {
       console.error('No headerElement found for scroll behavior setup');
       return;
     }
-    
-    
+
+
     // Remove existing scroll listener if any
     if (this.scrollListener) {
       window.removeEventListener('scroll', this.scrollListener);
     }
-    
+
     // Remove existing resize listener if any
     if (this.resizeListener) {
       window.removeEventListener('resize', this.resizeListener);
     }
-    
+
     let ticking = false;
 
     const updateHeader = () => {
       if (!this.headerElement) return;
 
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop || 0;
-      
+
       // For special pages (room/scene/cameras), show header immediately when scrolling
       // For home page, keep the 70px threshold
       const scrollThreshold = this.currentConfig.isSpecialPage ? 1 : 30;
-      
+
       if (scrollTop > scrollThreshold) {
         this.headerElement.classList.add('scrolled');
       } else {
@@ -906,7 +912,7 @@ export class AppleHeader {
       requestAnimationFrame(() => {
         // Update HA header height for sticky positioning (all pages)
         this.updateHAHeaderHeight();
-        
+
         // Update fixed header positioning only for group pages
         if (this.currentConfig.isGroupPage) {
           this.updateFixedHeaderPosition();
@@ -916,10 +922,10 @@ export class AppleHeader {
 
     window.addEventListener('scroll', this.scrollListener);
     window.addEventListener('resize', this.resizeListener);
-    
+
     // Note: Observers are now set up in the initialization flow after HA interface is ready
   }
-  
+
   /**
    * Set up multiple observers to catch sidebar changes and HA header changes
    */
@@ -928,17 +934,17 @@ export class AppleHeader {
     if (this.sidebarObserver) {
       this.sidebarObserver.disconnect();
     }
-    
+
     // Find the elements
     const homeAssistant = document.querySelector('home-assistant');
     const homeAssistantMain = homeAssistant?.shadowRoot?.querySelector('home-assistant-main');
     const haDrawer = homeAssistantMain?.shadowRoot?.querySelector('ha-drawer') as HTMLElement;
     const haPanelLovelace = haDrawer?.querySelector('ha-panel-lovelace') as HTMLElement;
     const huiRoot = haPanelLovelace?.shadowRoot?.querySelector('hui-root') as HTMLElement;
-    
+
     // Try multiple observation strategies
     const observers: Array<MutationObserver | ResizeObserver> = [];
-    
+
     // 1. Watch home-assistant-main for attribute changes (sidebar)
     if (homeAssistantMain) {
       const mainObserver = new MutationObserver((mutations) => {
@@ -954,7 +960,7 @@ export class AppleHeader {
           }
         });
       });
-      
+
       mainObserver.observe(homeAssistantMain, {
         attributes: true,
         attributeFilter: ['expanded'],
@@ -962,7 +968,7 @@ export class AppleHeader {
       });
       observers.push(mainObserver);
     }
-    
+
     // 2. Watch hui-root for changes (header visibility changes)
     if (huiRoot && huiRoot.shadowRoot) {
       const huiObserver = new MutationObserver((mutations) => {
@@ -979,7 +985,7 @@ export class AppleHeader {
           }
         });
       });
-      
+
       huiObserver.observe(huiRoot.shadowRoot, {
         childList: true,
         subtree: true,
@@ -988,7 +994,7 @@ export class AppleHeader {
       });
       observers.push(huiObserver);
     }
-    
+
     // 3. Watch for header element specifically
     if (huiRoot?.shadowRoot) {
       const header = huiRoot.shadowRoot.querySelector('.header') as HTMLElement;
@@ -1002,13 +1008,13 @@ export class AppleHeader {
             }
           });
         });
-        
+
         headerObserver.observe(header, {
           attributes: true,
           attributeFilter: ['style', 'class', 'hidden']
         });
         observers.push(headerObserver);
-        
+
         // Also use ResizeObserver on the header
         if (window.ResizeObserver) {
           const headerResizeObserver = new ResizeObserver(() => {
@@ -1019,13 +1025,13 @@ export class AppleHeader {
               }
             });
           });
-          
+
           headerResizeObserver.observe(header);
           observers.push(headerResizeObserver);
         }
       }
     }
-    
+
     // 4. Watch ha-drawer with ResizeObserver (backup)
     if (haDrawer && window.ResizeObserver) {
       const drawerResizeObserver = new ResizeObserver(() => {
@@ -1036,11 +1042,11 @@ export class AppleHeader {
           }
         });
       });
-      
+
       drawerResizeObserver.observe(haDrawer);
       observers.push(drawerResizeObserver);
     }
-    
+
     // 5. Watch ha-panel-lovelace with ResizeObserver (backup)
     if (haPanelLovelace && window.ResizeObserver) {
       const panelResizeObserver = new ResizeObserver(() => {
@@ -1051,11 +1057,11 @@ export class AppleHeader {
           }
         });
       });
-      
+
       panelResizeObserver.observe(haPanelLovelace);
       observers.push(panelResizeObserver);
     }
-    
+
     // Store a cleanup function that disconnects all observers
     this.sidebarObserver = {
       disconnect: () => {
@@ -1068,17 +1074,17 @@ export class AppleHeader {
     if (!this.dropdown) return;
 
     this.isDropdownOpen = !this.isDropdownOpen;
-    
+
     // Refresh dropdown content when opening to ensure current state is reflected
     if (this.isDropdownOpen) {
       this.dropdown.innerHTML = this.getDropdownContent();
       // Event listeners need to be re-attached after innerHTML change
       this.setupDropdownItemListeners();
-      
+
       // Position dropdown to stay within viewport
       this.positionDropdown();
     }
-    
+
     this.dropdown.classList.toggle('open', this.isDropdownOpen);
   }
 
@@ -1105,11 +1111,11 @@ export class AppleHeader {
     if (RTLHelper.isRTL()) {
       const spaceOnLeft = buttonRect.left;
       const spaceOnRight = viewportWidth - buttonRect.right;
-      
+
       // Reset positioning
       this.dropdown.style.right = 'auto';
       this.dropdown.style.left = 'auto';
-      
+
       // If dropdown would overflow on the left, adjust position
       if (spaceOnLeft < dropdownWidth + 10) {
         this.dropdown.style.left = '10px';
@@ -1118,11 +1124,11 @@ export class AppleHeader {
       }
     } else {
       const spaceOnRight = viewportWidth - buttonRect.right;
-      
+
       // Reset positioning
       this.dropdown.style.right = 'auto';
       this.dropdown.style.left = 'auto';
-      
+
       // If dropdown would overflow on the right, adjust position
       if (spaceOnRight < dropdownWidth + 10) {
         this.dropdown.style.right = '10px';
@@ -1134,20 +1140,20 @@ export class AppleHeader {
 
   private closeDropdown() {
     if (!this.dropdown) return;
-    
+
     this.isDropdownOpen = false;
     this.dropdown.classList.remove('open');
   }
 
   private toggleEditMode() {
-    
+
     if (!this.editModeManager) {
       return;
     }
-    
+
     // Use EditModeManager to toggle (this will trigger the callback)
     this.editModeManager.toggleEditMode();
-    
+
     // Update UI based on new state
     if (this.menuButton) {
       this.menuButton.innerHTML = this.getMenuButtonContent();
@@ -1174,7 +1180,7 @@ export class AppleHeader {
    * This mimics mobile behavior where sidebar appears temporarily
    */
   private openSidebar() {
-      
+
     try {
       // Since we now use hass-dock-sidebar to make desktop behave like mobile,
       // we can use the same approach for both mobile and desktop!
@@ -1188,18 +1194,18 @@ export class AppleHeader {
         return;
       }
 
-          
+
       // Use Home Assistant's native toggle menu event - works for both mobile and desktop now!
       main.dispatchEvent(new CustomEvent("hass-toggle-menu", {
         detail: { open: true }, // explicitly open the sidebar
         bubbles: true,
         composed: true,
       }));
-      
-          
+
+
     } catch (error) {
       console.error('❌ AppleHeader: Error dispatching sidebar toggle event:', error);
-      
+
       // Fallback to manual approach if the event system fails
       this.openSidebarManually();
     }
@@ -1214,7 +1220,7 @@ export class AppleHeader {
    * (e.g., when sidebar is completely hidden by dashboard settings)
    */
   private openSidebarManually() {
-      
+
     try {
       // Find elements using the same method as HomeAssistantUIManager
       const homeAssistant = document.querySelector('home-assistant');
@@ -1235,66 +1241,66 @@ export class AppleHeader {
         return;
       }
 
-          
+
       const isMobile = window.innerWidth <= 768;
-      
+
       // Look for the app layout or main content area
-      const appDrawerLayout = main.shadowRoot.querySelector('app-drawer-layout') || 
-                              main.shadowRoot.querySelector('ha-app-layout');
-      
+      const appDrawerLayout = main.shadowRoot.querySelector('app-drawer-layout') ||
+        main.shadowRoot.querySelector('ha-app-layout');
+
       if (appDrawerLayout) {
-              
+
         // Try to find the actual drawer mechanism
-        const actualDrawer = appDrawerLayout.querySelector('app-drawer') || 
-                            appDrawerLayout.querySelector('mwc-drawer');
-        
+        const actualDrawer = appDrawerLayout.querySelector('app-drawer') ||
+          appDrawerLayout.querySelector('mwc-drawer');
+
         if (actualDrawer) {
-          
+
           // Try to open this drawer
           if (typeof (actualDrawer as any).open === 'function') {
-                      (actualDrawer as any).open();
+            (actualDrawer as any).open();
           } else if ((actualDrawer as any).opened !== undefined) {
-                      (actualDrawer as any).opened = true;
+            (actualDrawer as any).opened = true;
           }
-          
+
           // Create backdrop for both mobile and desktop
           this.createSidebarBackdrop(actualDrawer);
           return;
         }
       }
-      
+
       if (isMobile) {
         // Mobile-specific manual approach
-              
+
         // First, try to find and trigger the native HA mobile menu
         const haAppLayout = main.shadowRoot.querySelector('ha-app-layout');
         const appDrawerLayoutFallback = main.shadowRoot.querySelector('app-drawer-layout');
-        
+
         if (haAppLayout || appDrawerLayoutFallback) {
           const layout = (haAppLayout || appDrawerLayoutFallback) as HTMLElement;
-                  
+
           // Try to find the drawer inside the layout
           const layoutDrawer = layout.querySelector('app-drawer') as any;
           if (layoutDrawer) {
-                      
+
             // Set up smooth animation
             layoutDrawer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)';
-            
+
             // Open the drawer
             if (typeof layoutDrawer.open === 'function') {
               layoutDrawer.open();
             } else {
               layoutDrawer.opened = true;
             }
-            
+
             // Create backdrop for click-outside behavior
             this.createSidebarBackdrop(layoutDrawer);
             return;
           }
         }
-        
+
         // Final fallback: Manual mobile drawer styling
-              
+
         // Style the drawer for mobile overlay
         drawer.style.cssText = `
           position: fixed !important;
@@ -1310,44 +1316,44 @@ export class AppleHeader {
           box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3) !important;
           transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
         `;
-        
+
         // Find and show sidebar content
-        const sidebarContent = drawer.querySelector('ha-sidebar') || 
-                              drawer.querySelector('[role="navigation"]') ||
-                              drawer.querySelector('.mdc-drawer__content') ||
-                              drawer.firstElementChild;
-        
+        const sidebarContent = drawer.querySelector('ha-sidebar') ||
+          drawer.querySelector('[role="navigation"]') ||
+          drawer.querySelector('.mdc-drawer__content') ||
+          drawer.firstElementChild;
+
         if (sidebarContent) {
-                  (sidebarContent as HTMLElement).style.cssText = `
+          (sidebarContent as HTMLElement).style.cssText = `
             visibility: visible !important;
             display: block !important;
             height: 100% !important;
             width: 100% !important;
           `;
         }
-        
+
         // Create backdrop
         this.createSidebarBackdrop(drawer);
-        
+
       } else {
         // Desktop approach - temporarily remove collapsed styles with animation
-              const wasCollapsed = main.hasAttribute('collapsed');
-        
+        const wasCollapsed = main.hasAttribute('collapsed');
+
         if (wasCollapsed) {
           // Add transition for smooth animation
           main.style.transition = 'margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)';
           drawer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)';
-          
+
           // Remove collapsed state
           main.removeAttribute('collapsed');
           main.style.removeProperty('--mdc-drawer-width');
           main.style.removeProperty('--app-drawer-width');
-          
+
           // Ensure drawer is visible
           drawer.style.transform = 'translateX(0px)';
           drawer.style.visibility = 'visible';
           drawer.style.display = 'block';
-          
+
           // Set up click outside to restore collapsed state
           this.setupTemporarySidebarClose(drawer, main, true);
         } else {
@@ -1356,12 +1362,12 @@ export class AppleHeader {
           drawer.style.visibility = 'visible';
           drawer.style.display = 'block';
           drawer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)';
-          
+
           this.createSidebarBackdrop(drawer);
         }
       }
-      
-          
+
+
     } catch (error) {
       console.error('❌ AppleHeader: Error in manual sidebar opening:', error);
     }
@@ -1380,7 +1386,7 @@ export class AppleHeader {
     // Create new backdrop - only cover the area not occupied by sidebar
     const backdrop = document.createElement('div');
     backdrop.className = 'apple-sidebar-backdrop';
-    
+
     // RTL-aware positioning
     const isRTL = RTLHelper.isRTL();
     backdrop.style.cssText = `
@@ -1393,12 +1399,12 @@ export class AppleHeader {
       z-index: 99;
       pointer-events: all;
     `;
-    
+
     // Add click handler to close sidebar
     backdrop.addEventListener('click', () => {
       this.closeMobileSidebar(drawer);
     });
-    
+
     document.body.appendChild(backdrop);
   }
 
@@ -1406,7 +1412,7 @@ export class AppleHeader {
    * Close mobile sidebar overlay
    */
   private closeMobileSidebar(drawer: any) {
-      
+
     // Check if this is an app-drawer that can be closed properly
     if (typeof drawer.close === 'function') {
       drawer.close();
@@ -1415,23 +1421,23 @@ export class AppleHeader {
     } else {
       // Manual close with animation
       drawer.style.transform = 'translateX(-100%)';
-      
+
       // Clean up styles after animation
       setTimeout(() => {
         drawer.style.cssText = '';
-        
+
         // Also reset any nested content
-        const sidebarContent = drawer.querySelector('ha-sidebar') || 
-                              drawer.querySelector('[role="navigation"]') ||
-                              drawer.querySelector('.mdc-drawer__content') ||
-                              drawer.firstElementChild;
-        
+        const sidebarContent = drawer.querySelector('ha-sidebar') ||
+          drawer.querySelector('[role="navigation"]') ||
+          drawer.querySelector('.mdc-drawer__content') ||
+          drawer.firstElementChild;
+
         if (sidebarContent) {
           (sidebarContent as HTMLElement).style.cssText = '';
         }
       }, 300); // Match transition duration
     }
-    
+
     // Remove backdrop
     const backdrop = document.querySelector('.apple-sidebar-backdrop');
     if (backdrop) {
@@ -1451,7 +1457,7 @@ export class AppleHeader {
     // Create a new temporary close handler
     this.tempSidebarCloseHandler = (event: Event) => {
       const target = event.target as HTMLElement;
-      
+
       // Don't close if clicking on the sidebar button itself
       if (target.closest('.apple-header-sidebar-button')) {
         return;
@@ -1474,7 +1480,7 @@ export class AppleHeader {
         mainElement.setAttribute('collapsed', '');
         mainElement.style.setProperty('--mdc-drawer-width', '0px');
         mainElement.style.setProperty('--app-drawer-width', '0px');
-        
+
         // Clean up transitions after animation completes
         setTimeout(() => {
           mainElement.style.removeProperty('transition');
@@ -1522,21 +1528,21 @@ export class AppleHeader {
    */
   private addSidebarButton() {
     if (!this.headerElement) return;
-    
+
     const headerContent = this.headerElement.querySelector('.apple-header-content');
     if (!headerContent) return;
-    
+
     // Create the sidebar button element
     const sidebarButton = document.createElement('button');
-    sidebarButton.className = 'apple-header-sidebar-button';
+    sidebarButton.className = `apple-header-sidebar-button ${LiquidGlassClasses.headerButton}`;
     sidebarButton.innerHTML = '<ha-icon icon="mdi:menu"></ha-icon>';
-    
+
     // Add event listener
     sidebarButton.addEventListener('click', (e: Event) => {
       e.stopPropagation();
       this.openSidebar();
     });
-    
+
     // Insert at the beginning of header content
     headerContent.insertBefore(sidebarButton, headerContent.firstChild);
   }
@@ -1607,11 +1613,11 @@ export class AppleHeader {
       if (this._hass.areas) {
         return Object.values(this._hass.areas);
       }
-      
+
       const areas = await this._hass.callWS({
         type: 'config/area_registry/list',
       });
-      
+
       return areas || [];
     } catch (error) {
       console.warn('Could not fetch areas:', error);
@@ -1622,7 +1628,7 @@ export class AppleHeader {
   private navigateToHome() {
     const currentPath = window.location.pathname;
     let basePath = '';
-    
+
     // Handle different dashboard URL patterns
     if (currentPath.startsWith('/lovelace/')) {
       basePath = '/lovelace/';
@@ -1637,10 +1643,10 @@ export class AppleHeader {
         basePath = '/lovelace/';
       }
     }
-    
+
     // Navigate to home
     const newUrl = `${basePath}home`;
-    
+
     // Navigate using Home Assistant's system
     window.history.pushState(null, '', newUrl);
     const event = new Event('location-changed', { bubbles: true, composed: true });
@@ -1650,7 +1656,7 @@ export class AppleHeader {
   private navigateToRoom(roomId: string) {
     const currentPath = window.location.pathname;
     let basePath = '';
-    
+
     // Handle different dashboard URL patterns
     if (currentPath.startsWith('/lovelace/')) {
       basePath = '/lovelace/';
@@ -1665,10 +1671,10 @@ export class AppleHeader {
         basePath = '/lovelace/';
       }
     }
-    
+
     // Navigate to room using the same pattern as AreaSection
     const newUrl = `${basePath}room-${roomId}`;
-    
+
     // Navigate using Home Assistant's system
     window.history.pushState(null, '', newUrl);
     const event = new Event('location-changed', { bubbles: true, composed: true });
@@ -1676,11 +1682,17 @@ export class AppleHeader {
   }
 
   private addStyles() {
-    if (document.querySelector('#apple-header-styles')) return;
+    // Inject centralized liquid glass button styles (for non-shadow DOM contexts)
+    injectLiquidGlassStyles();
     
+    if (document.querySelector('#apple-header-styles')) return;
+
     const style = document.createElement('style');
     style.id = 'apple-header-styles';
     style.textContent = `
+      /* Include liquid glass styles for shadow DOM context */
+      ${liquidGlassCSS}
+      
       /* Sticky header for home page, fixed for group pages */
       .apple-home-header {
         position: sticky;
@@ -1720,9 +1732,32 @@ export class AppleHeader {
       }
 
       .apple-home-header.scrolled {
-        background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(50px);
-        -webkit-backdrop-filter: blur(50px);
+        background: transparent;
+      }
+
+      .apple-home-header.scrolled::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 1) 0%,
+          rgba(0, 0, 0, 0.7) 40%,
+          rgba(0, 0, 0, 0) 100%
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 1) 0%,
+          rgba(0, 0, 0, 0.7) 40%,
+          rgba(0, 0, 0, 0) 100%
+        );
+        z-index: -1;
+        pointer-events: none;
       }
 
       .apple-header-content {
@@ -1733,29 +1768,27 @@ export class AppleHeader {
         position: relative;
       }
 
-      /* Back button - absolute positioned on left */
+      /* Back button - positioning only (glass effect from .liquid-glass-transparent) */
       .apple-header-back-button {
-        background: transparent;
-        border: none;
-        color: #ffffff;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
         position: absolute;
         left: 16px;
         top: 50%;
         transform: translateY(-50%);
         z-index: 10;
-        font-size: 16px;
-        font-weight: 400;
-        gap: 2px;
       }
 
-      /* Fixed top position for group pages to prevent moving during scroll */
+      .apple-header-back-button:active {
+        transform: translateY(-50%) scale(0.95);
+      }
+
+      /* Fixed top position for group pages */
       .apple-home-header.group-page .apple-header-back-button {
         top: 12px;
         transform: none;
+      }
+
+      .apple-home-header.group-page .apple-header-back-button:active {
+        transform: scale(0.95);
       }
 
       /* RTL positioning for group-page back button */
@@ -1764,24 +1797,27 @@ export class AppleHeader {
         right: 16px;
         top: 12px;
         transform: none;
-        justify-content: flex-end;
       }
 
       .apple-header-back-button ha-icon {
-        --mdc-icon-size: 30px;
+        --mdc-icon-size: 26px;
         flex-shrink: 0;
+        position: relative;
+        z-index: 2;
       }
 
       .apple-home-header.rtl .apple-header-back-button {
         left: auto;
         right: 16px;
-        justify-content: flex-end;
       }
 
       /* Mobile adjustments for back button */
       @media (max-width: 768px) {
         .apple-header-back-button {
           left: 12px;
+          width: 34px;
+          height: 34px;
+          min-width: 34px;
         }
 
         .apple-home-header.rtl .apple-header-back-button {
@@ -1790,37 +1826,38 @@ export class AppleHeader {
         }
       }
 
-      /* Ensure back button text direction is correct */
-      .apple-header-back-button span {
-        direction: inherit;
-      }
-
-      /* Sidebar button - absolute positioned on left, similar to back button */
+      /* Sidebar button - positioning only (glass effect from .liquid-glass-transparent) */
       .apple-header-sidebar-button {
-        background: transparent;
-        border: none;
-        color: #ffffff;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
         position: absolute;
         left: 16px;
-        top: 12px;
+        top: 50%;
+        transform: translateY(-50%);
         z-index: 10;
-        border-radius: 12px;
-        width: 44px;
-        height: 44px;
-        transition: all 0.2s ease;
+      }
+
+      .apple-header-sidebar-button:active {
+        transform: translateY(-50%) scale(0.95);
       }
 
       .apple-header-sidebar-button ha-icon {
-        --mdc-icon-size: 24px;
+        --mdc-icon-size: 22px;
+        position: relative;
+        z-index: 2;
       }
 
       .apple-home-header.rtl .apple-header-sidebar-button {
         left: auto !important;
         right: 16px !important;
+      }
+
+      /* Fixed top position for group pages */
+      .apple-home-header.group-page .apple-header-sidebar-button {
+        top: 13px;
+        transform: none;
+      }
+
+      .apple-home-header.group-page .apple-header-sidebar-button:active {
+        transform: scale(0.95);
       }
 
       /* RTL positioning for group-page sidebar button on desktop */
@@ -1833,12 +1870,13 @@ export class AppleHeader {
       @media (max-width: 768px) {
         .apple-header-sidebar-button {
           left: 12px;
-          width: 40px;
-          height: 40px;
+          width: 34px;
+          height: 34px;
+          min-width: 34px;
         }
 
         .apple-home-header.group-page .apple-header-sidebar-button {
-          top: 10px;
+          top: 13px;
         }
 
         /* RTL positioning for group-page sidebar button on mobile */
@@ -1910,32 +1948,28 @@ export class AppleHeader {
         display: block;
       }
 
-      /* Menu button - absolute positioned */
+      /* Menu button - positioning only (glass effect from .liquid-glass-transparent) */
       .apple-header-menu-button {
-        background: transparent;
-        border: none;
-        color: #ffffff;
-        cursor: pointer;
-        padding: 8px;
-        transition: all 0.2s ease;
-        font-family: inherit;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 36px;
-        height: 36px;
-        outline: none;
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
         right: 16px;
         z-index: 10;
+        font-family: inherit;
+      }
+
+      .apple-header-menu-button:active {
+        transform: translateY(-50%) scale(0.95);
       }
 
       /* Fixed top position for group pages */
       .apple-home-header.group-page .apple-header-menu-button {
         top: 12px;
         transform: none;
+      }
+
+      .apple-home-header.group-page .apple-header-menu-button:active {
+        transform: scale(0.97);
       }
 
       /* RTL positioning for group-page menu button */
@@ -1955,6 +1989,9 @@ export class AppleHeader {
       @media (max-width: 768px) {
         .apple-header-menu-button {
           right: 12px;
+          width: 34px;
+          height: 34px;
+          min-width: 34px;
         }
 
         .apple-home-header.rtl .apple-header-menu-button {
@@ -1964,35 +2001,66 @@ export class AppleHeader {
       }
 
       .apple-header-menu-button.edit-mode {
-        min-width: 60px;
-        padding: 8px 16px;
+        background: rgba(255, 149, 0, 0.85) !important;
+        box-shadow: 
+          inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+          0 2px 8px rgba(255, 149, 0, 0.3) !important;
       }
 
-      .apple-header-menu-button .done-text {
-        font-size: 16px;
-        font-weight: 600;
-        white-space: nowrap;
+      .apple-header-menu-button.edit-mode::before {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.5) 0%,
+          rgba(255, 200, 100, 0.2) 25%,
+          rgba(255, 255, 255, 0.35) 50%,
+          rgba(255, 200, 100, 0.15) 75%,
+          rgba(255, 255, 255, 0.45) 100%
+        ) !important;
+      }
+
+      .apple-header-menu-button.edit-mode:hover {
+        background: rgba(255, 159, 10, 0.9) !important;
+      }
+
+      .apple-header-menu-button.edit-mode:active {
+        background: rgba(255, 139, 0, 0.95) !important;
+      }
+
+      .apple-header-menu-button.edit-mode ha-icon {
+        --mdc-icon-size: 22px;
       }
 
       /* Dropdown */
       .apple-header-dropdown {
         position: absolute;
-        top: calc(100% - 18px);
+        top: calc(100% - 50px);
         right: 10px;
-        width: 250px;
+        width: 220px;
         max-height: calc(100vh - 150px);
         overflow-y: auto;
-        background: rgb(38 38 38 / 98%);
-        backdrop-filter: blur(40px);
-        -webkit-backdrop-filter: blur(40px);
-        border-radius: 16px;
-        padding: 6px 0;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        background: rgba(30, 30, 30, 0.75);
+        backdrop-filter: blur(50px) saturate(180%);
+        -webkit-backdrop-filter: blur(50px) saturate(180%);
+        border-radius: 14px;
+        padding: 4px 0;
         opacity: 0;
         visibility: hidden;
         transform: translateY(-6px) scale(0.96);
         transition: all 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         z-index: 2000;
         pointer-events: none;
+        box-shadow: 
+          0 0 0 0.5px rgba(255, 255, 255, 0.1),
+          0 10px 40px rgba(0, 0, 0, 0.4);
+      }
+
+      .apple-header-dropdown::-webkit-scrollbar {
+        display: none;
       }
 
       .apple-home-header.rtl .apple-header-dropdown {
@@ -2019,29 +2087,30 @@ export class AppleHeader {
 
       .dropdown-separator {
         height: 0.5px;
-        background: rgba(84, 84, 88, 0.5);
-        margin: 4px 0;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 4px 16px;
       }
 
       .dropdown-separator-thick {
-        height: 5px;
-        background: #00000050;
-        margin: 8px 0 4px 0;
+        height: 0.5px;
+        background: rgba(255, 255, 255, 0.15);
+        margin: 6px 16px;
       }
 
       .dropdown-item {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 0 16px;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 0 12px;
         color: rgba(255, 255, 255, 0.9);
         cursor: pointer;
         transition: background 0.15s ease;
-        font-size: 17px;
+        font-size: 15px;
         font-weight: 400;
-        letter-spacing: -0.4px;
+        letter-spacing: -0.2px;
         line-height: 1.3;
-        min-height: 44px;
+        min-height: 40px;
         direction: inherit;
       }
 
@@ -2060,18 +2129,49 @@ export class AppleHeader {
       }
 
       .dropdown-item ha-icon {
-        margin-left: 14px;
-        opacity: 0.7;
+        opacity: 0.6;
         flex-shrink: 0;
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         color: rgba(255, 255, 255, 0.9);
-        --mdc-icon-size: 24px;
+        --mdc-icon-size: 20px;
+      }
+
+      /* Checkmark placeholder for all items */
+      .dropdown-item .item-checkmark,
+      .dropdown-item .room-checkmark {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        flex: 0 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Room items with checkmark space */
+      .dropdown-item.room-item {
+        padding: 0 12px;
+      }
+
+      .dropdown-item.room-item.active .room-checkmark::before {
+        content: '✓';
+        font-size: 15px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
       }
 
       .apple-home-header.rtl .dropdown-item ha-icon {
-        margin-left: 0;
-        margin-right: 14px;
+        order: 2;
+      }
+
+      .apple-home-header.rtl .dropdown-item span {
+        order: 1;
+      }
+
+      .apple-home-header.rtl .dropdown-item.room-item {
+        padding-left: 20px;
+        padding-right: 16px;
       }
 
       .dropdown-item.edit-item.active {
@@ -2131,7 +2231,7 @@ export class AppleHeader {
         padding-top: 68px; /* Header height + some margin */
       }
 
-      /* Responsive */
+      /* Responsive - tablet */
       @media (max-width: 768px) {
 
         .apple-home-header {
@@ -2155,6 +2255,78 @@ export class AppleHeader {
         /* Adjust padding for mobile fixed header */
         .page-content.has-fixed-header {
           padding-top: 60px; /* Slightly less on mobile */
+        }
+      }
+      
+      /* Small mobile adjustments */
+      @media (max-width: 479px) {
+        .apple-home-header {
+          width: calc(100% + 24px);
+          margin-left: -12px;
+        }
+        
+        .apple-header-content {
+          padding: 8px 12px;
+        }
+        
+        .apple-header-scrolled-title {
+          font-size: 15px;
+        }
+        
+        .apple-header-dropdown {
+          width: 200px;
+          right: 8px;
+        }
+        
+        .apple-home-header.rtl .apple-header-dropdown {
+          right: auto;
+          left: 8px;
+        }
+      }
+      
+      /* Extra small / accessibility */
+      @media (max-width: 359px) {
+        .apple-home-header {
+          width: calc(100% + 20px);
+          margin-left: -10px;
+        }
+        
+        .apple-header-content {
+          padding: 6px 10px;
+        }
+        
+        .apple-header-scrolled-title {
+          font-size: 14px;
+        }
+        
+        .apple-header-dropdown {
+          width: 180px;
+          right: 6px;
+        }
+        
+        .apple-home-header.rtl .apple-header-dropdown {
+          right: auto;
+          left: 6px;
+        }
+        
+        .dropdown-item {
+          padding: 10px 14px;
+          font-size: 14px;
+        }
+        
+        .page-content.has-fixed-header {
+          padding-top: 50px;
+        }
+      }
+      
+      /* Reduce motion for accessibility */
+      @media (prefers-reduced-motion: reduce) {
+        .apple-home-header,
+        .apple-header-scrolled,
+        .apple-header-dropdown,
+        ha-drawer,
+        home-assistant-main {
+          transition: none !important;
         }
       }
 
@@ -2246,19 +2418,19 @@ export class AppleHeader {
       window.removeEventListener('scroll', this.scrollListener);
       this.scrollListener = undefined;
     }
-    
+
     // Remove existing resize listener
     if (this.resizeListener) {
       window.removeEventListener('resize', this.resizeListener);
       this.resizeListener = undefined;
     }
-    
+
     // Clean up sidebar observer
     if (this.sidebarObserver) {
       this.sidebarObserver.disconnect();
       this.sidebarObserver = undefined;
     }
-    
+
     // Remove document event listeners
     if (this.clickOutsideListener) {
       document.removeEventListener('click', this.clickOutsideListener);
@@ -2274,16 +2446,16 @@ export class AppleHeader {
       document.removeEventListener('click', this.tempSidebarCloseHandler);
       this.tempSidebarCloseHandler = undefined;
     }
-    
+
     // Remove existing elements
     this.container?.querySelector('.apple-home-header')?.remove();
     this.container?.querySelector('.apple-static-title')?.remove();
-    
+
     // Remove fixed header padding class if it exists - container IS the page-content
     if (this.container) {
       this.container.classList.remove('has-fixed-header');
     }
-    
+
     // Clear references
     this.headerElement = undefined;
     this.menuButton = undefined;
@@ -2301,15 +2473,15 @@ export class AppleHeader {
   setHass(hass: any) {
     const now = Date.now();
     this.setHassCallCount++;
-    
+
     // Store the latest hass object
     this.pendingHass = hass;
-    
+
     // If we have a pending timeout, clear it
     if (this.setHassTimeout) {
       clearTimeout(this.setHassTimeout);
     }
-    
+
     // Debounce setHass calls - only process after 100ms of no new calls
     this.setHassTimeout = setTimeout(() => {
       this.processSetHass(this.pendingHass);
@@ -2319,10 +2491,10 @@ export class AppleHeader {
 
   private processSetHass(hass: any) {
     this._hass = hass;
-    
+
     // Initialize RTL detection with Home Assistant data
     RTLHelper.initialize(hass);
-    
+
     // Only update home title from hass if on home page and title hasn't been set recently
     // Don't override titles for special pages (room, scenes, cameras) - only for actual home page
     if (!this.currentConfig.isGroupPage && !this.currentConfig.isSpecialPage && hass?.config?.location_name) {
@@ -2342,13 +2514,13 @@ export class AppleHeader {
     if (this.editMode && this.editModeManager) {
       // Exit edit mode through EditModeManager
       this.editModeManager.toggleEditMode();
-      
+
       // Update UI to reflect exit from edit mode
       if (this.menuButton) {
         this.menuButton.innerHTML = this.getMenuButtonContent();
         this.menuButton.classList.remove('edit-mode');
       }
-      
+
       // Update dropdown UI
       this.dropdown?.querySelector('.edit-item')?.classList.remove('active');
     }
@@ -2376,7 +2548,7 @@ export class AppleHeader {
 
   destroy() {
     this.cleanup();
-    
+
     const style = document.querySelector('#apple-header-styles');
     if (style) {
       style.remove();

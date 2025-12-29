@@ -49,14 +49,60 @@ export class AppleChips {
     this.container = container;
     this.customizationManager = customizationManager;
     // Initialize showSwitches and includedSwitches settings
-    this.updateSwitchSettings();
+    this.updateSettings();
   }
 
-  private async updateSwitchSettings() {
+  private async updateSettings() {
     if (this.customizationManager) {
       this.showSwitches = await this.customizationManager.getShowSwitches() || false;
       this.includedSwitches = await this.customizationManager.getIncludedSwitches() || [];
     }
+  }
+
+  /**
+   * Get hidden sections synchronously from customization manager
+   * This ensures we always have the current value without async delay
+   */
+  private getHiddenSections(): string[] {
+    if (!this.customizationManager) return [];
+    return this.customizationManager.getHiddenSections() || [];
+  }
+
+  /**
+   * Get the area ID for an entity, checking both entity registry and device registry
+   */
+  private getEntityAreaId(entityId: string): string | null {
+    if (!this._hass) return null;
+    
+    // Check entity registry first
+    const entityRegistry = this._hass.entities?.[entityId];
+    if (entityRegistry?.area_id) {
+      return entityRegistry.area_id;
+    }
+    
+    // If entity doesn't have an area but has a device, check device's area
+    if (entityRegistry?.device_id) {
+      const device = this._hass.devices?.[entityRegistry.device_id];
+      if (device?.area_id) {
+        return device.area_id;
+      }
+    }
+    
+    // No area found - entity belongs to "no_area" (Default Room)
+    return 'no_area';
+  }
+
+  /**
+   * Check if an entity belongs to a hidden area/section
+   */
+  private isEntityInHiddenArea(entityId: string): boolean {
+    const hiddenSections = this.getHiddenSections();
+    if (hiddenSections.length === 0) return false;
+    
+    const areaId = this.getEntityAreaId(entityId);
+    if (!areaId) return false;
+    
+    return hiddenSections.includes(areaId);
   }
 
   static getDefaultConfig(): ChipsConfig {
@@ -96,8 +142,8 @@ export class AppleChips {
       ...config
     };
     
-    // Update switch settings in case they changed
-    this.updateSwitchSettings();
+    // Update settings in case they changed
+    this.updateSettings();
     
     // Trigger render if we have hass
     if (this._hass) {
@@ -285,13 +331,17 @@ export class AppleChips {
     if (!this._hass || !this.config) return;
 
     this.chips = [];
-    // Filter out hidden and disabled entities from chip calculations
+    // Filter out hidden, disabled entities, and entities from hidden areas from chip calculations
     const allEntities = Object.values(this._hass.states).filter((entity: any) => {
       const entityRegistry = this._hass.entities?.[entity.entity_id];
       if (entityRegistry && entityRegistry.hidden_by) {
         return false;
       }
       if (entityRegistry && entityRegistry.disabled_by) {
+        return false;
+      }
+      // Filter out entities from hidden areas/rooms
+      if (this.isEntityInHiddenArea(entity.entity_id)) {
         return false;
       }
       return true;
@@ -346,8 +396,9 @@ export class AppleChips {
         groupEntities.push(...waterEntities);
       }
 
-      // Show chip if there are entities for this group (or show_when_zero is true)
-      const shouldShow = groupEntities.length > 0 || config.show_when_zero;
+      // Only show chip if there are actual entities for this group
+      // Don't show empty chips even if show_when_zero is true (that setting is for showing "0 on" status, not for empty groups)
+      const shouldShow = groupEntities.length > 0;
       
       if (shouldShow) {
         const groupStyle = DashboardConfig.getGroupStyle(group);
@@ -541,6 +592,92 @@ export class AppleChips {
           font-weight: 500;
           color: rgba(255, 255, 255, 0.7);
           line-height: 1.2;
+        }
+        
+        /* Responsive chip sizing */
+        @media (max-width: 479px) {
+          .chips-container {
+            gap: 8px;
+          }
+          
+          .chip {
+            padding: 4px 14px 4px 8px;
+            min-height: 32px;
+          }
+          
+          .chip-icon {
+            width: 20px;
+            height: 20px;
+          }
+          
+          .chip-icon ha-icon {
+            width: 20px;
+            height: 20px;
+            --mdc-icon-size: 20px;
+          }
+          
+          .chip-group-name {
+            font-size: 13px;
+          }
+          
+          .chip-status {
+            font-size: 11px;
+          }
+        }
+        
+        /* Extra small screens */
+        @media (max-width: 359px) {
+          .chips-container {
+            gap: 6px;
+          }
+          
+          .chip {
+            padding: 3px 12px 3px 6px;
+            min-height: 30px;
+            gap: 6px;
+          }
+          
+          .chip-icon {
+            width: 18px;
+            height: 18px;
+          }
+          
+          .chip-icon ha-icon {
+            width: 18px;
+            height: 18px;
+            --mdc-icon-size: 18px;
+          }
+          
+          .chip-group-name {
+            font-size: 12px;
+          }
+          
+          .chip-status {
+            font-size: 10px;
+          }
+        }
+        
+        /* RTL chips on small screens */
+        @media (max-width: 479px) {
+          .chips-container.rtl .chip {
+            padding: 4px 8px 4px 14px;
+          }
+        }
+        
+        @media (max-width: 359px) {
+          .chips-container.rtl .chip {
+            padding: 3px 6px 3px 12px;
+          }
+        }
+        
+        /* Reduce motion for accessibility */
+        @media (prefers-reduced-motion: reduce) {
+          .chip-wrapper.edit-mode {
+            animation: none !important;
+          }
+          .chip, .chip-wrapper {
+            transition: none !important;
+          }
         }
 
         @keyframes apple-home-shake {

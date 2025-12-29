@@ -28,7 +28,15 @@
     "away": "לא בבית",
     "cleaning": "מנקה",
     "docked": "בעמדת עגינה",
+    "returning": "חוזר לעגינה",
     "error": "שגיאה",
+    "safe": "בטוח",
+    "unsafe": "לא בטוח",
+    "running": "פועל",
+    "plugged_in": "מחובר",
+    "unplugged": "מנותק",
+    "up_to_date": "עדכני",
+    "update_available": "עדכון זמין",
     "armed": "דרוך",
     "armed_home": "דרוך - בבית",
     "armed_away": "דרוך - בחוץ",
@@ -41,6 +49,7 @@
     "arming": "דורך",
     "disarming": "מנטרל",
     "none": "ללא",
+    "press": "לחץ",
     "heat_to": "חימום ל",
     "cool_to": "קירור ל"
   },
@@ -76,7 +85,7 @@
     "motion": "תנועה",
     "locks": "מנעולים",
     "security": "אבטחה",
-    "covers": "תריסים",
+    "covers": "תריסים",    "blinds": "תריסים",    "garage_doors": "דלתות מוסך",
     "occupancy": "נוכחות",
     "light": "אור",
     "light_sensor": "אור",
@@ -147,7 +156,11 @@
     "hide_header": "הסתר פס עליון",
     "show_header": "הצג פס עליון",
     "hide_sidebar": "הסתר תפריט צד",
-    "show_sidebar": "הצג תפריט צד"
+    "show_sidebar": "הצג תפריט צד",
+    "hide_ha_header": "הסתר את הפס העליון של Home Assistant",
+    "show_ha_header": "הצג את הפס העליון של Home Assistant",
+    "hide_ha_sidebar": "הסתר את תפריט הצד של Home Assistant",
+    "show_ha_sidebar": "הצג את תפריט הצד של Home Assistant"
   },
   "battery": {
     "low_battery": "סוללה חלשה",
@@ -195,6 +208,7 @@
     "image_processing": "שגיאה בעיבוד התמונה. אנא נסה שוב."
   },
   "settings": {
+    "title": "הגדרות הבית",
     "show_switches_cards_description": "הצג כרטיסי מתגים בפאנל. מבוטל כברירת מחדל כדי לשמור על ממשק נקי וממוקד בפקדים חיוניים.",
     "include_switches_description": "אם ״הצג כרטיסי מתגים״ מבוטל,ניתן עדיין לכלול מתגים ספציפיים שברצונך להציג בפאנל",
     "favorite_accessories": "אביזרים מועדפים",
@@ -205,6 +219,9 @@
     "exclude_from_dashboard_description": "אביזרים שיוסתרו לחלוטין מכל העמודים",
     "show_switches_cards": "הצג כרטיסי מתגים",
     "include_specific_switches": "כלול מתגים ספציפיים",
+    "extra_accessories": "אביזרים נוספים",
+    "extra_accessories_description": "הוסף כל ישות מ-Home Assistant להצגה ככרטיס בפאנל. זה מאפשר לכלול חיישנים, בוליאנים, כפתורים וישויות אחרות שלא מוצגות כברירת מחדל.",
+    "search_entities": "חפש ישויות...",
     "home_wallpaper": "רקע מסך הבית",
     "take_photo": "בחר/צלם תמונה...",
     "choose_from_existing": "בחר רקע קיים",

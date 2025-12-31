@@ -356,6 +356,14 @@ export class SectionReorderManager {
 
       .section-drag-handle {
         color: #858585;
+        cursor: grab;
+        padding: 8px;
+        margin: -8px;
+        touch-action: none;
+      }
+      
+      .section-drag-handle:active {
+        cursor: grabbing;
       }
 
       .section-drag-handle * {
@@ -426,9 +434,11 @@ export class SectionReorderManager {
         opacity: 0 !important;
       }
 
-      /* Sortable.js drag class (actual dragged element) */
-      .sortable-drag {
+      /* Sortable.js drag class (actual dragged element) - use specific selector to override global styles */
+      .apple-section-reorder-modal .sortable-drag,
+      .sections-list .sortable-drag {
         opacity: 1 !important;
+        visibility: visible !important;
         background: rgba(44, 44, 46, 1) !important;
       }
 
@@ -610,6 +620,11 @@ export class SectionReorderManager {
       easing: "cubic-bezier(1, 0, 0, 1)",
       delay: 150,
       delayOnTouchOnly: true,
+      // Specify which elements are draggable
+      draggable: '.section-item',
+      // Use the drag handle for initiating drag
+      handle: '.section-drag-handle',
+      // Filter out visibility toggle to prevent it from starting a drag
       filter: '.section-visibility-toggle',
       preventOnFilter: false,
       ghostClass: 'sortable-ghost',

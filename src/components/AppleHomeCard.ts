@@ -28,6 +28,23 @@ export class AppleHomeCard extends HTMLElement {
   }
 
   connectedCallback() {
+    // CRITICAL FIX: Re-attach click handlers when card is reconnected to DOM
+    // This fixes the issue where cards become unclickable after navigation
+    // because disconnectedCallback removes the listeners but they weren't being re-added
+    if (this.shadowRoot && this._hass && this.entity) {
+      // Use setTimeout to ensure shadowRoot content is ready after potential re-render
+      setTimeout(() => {
+        // Check if click handlers need to be re-attached
+        const card = this.shadowRoot?.querySelector('.apple-home-card') as HTMLElement;
+        const isEditMode = this.closest('.entity-card-wrapper')?.classList.contains('edit-mode') || false;
+        
+        // Only setup handlers if not in edit mode and card exists
+        if (card && !isEditMode && !this.boundCardClick) {
+          this.setupClickHandlers();
+        }
+      }, 10);
+    }
+    
     // If this is a camera card being reattached (has snapshotManager but no images/timer),
     // we need to reinitialize the display since render() won't be called
     if (this.domain === 'camera' && this.cameraView === 'snapshot' && 
@@ -61,7 +78,8 @@ export class AppleHomeCard extends HTMLElement {
       this.queryTimer = undefined;
     }
     
-    // Remove click event listeners
+    // Remove click event listeners and clear references
+    // This allows connectedCallback to know handlers need to be re-attached
     if (this.shadowRoot) {
       const card = this.shadowRoot.querySelector('.apple-home-card');
       const icon = this.shadowRoot.querySelector('.info-icon');
@@ -73,6 +91,10 @@ export class AppleHomeCard extends HTMLElement {
         icon.removeEventListener('click', this.boundIconClick);
       }
     }
+    
+    // Clear the bound references so connectedCallback knows to re-attach
+    this.boundCardClick = undefined;
+    this.boundIconClick = undefined;
     
     // Clean up camera resources
     this.cameraImages.forEach(img => {

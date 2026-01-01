@@ -68,15 +68,51 @@ No manual YAML card definitions required.
 | alarm_control_panel | (Arm/Disarm via more‑info) | More‑info | Tall by default |
 | climate | More‑info | More‑info | Shows current temperature / mode (tall by default) |
 | media_player | Play / Pause / Power | More‑info | Active style when playing |
+| vacuum | Status display | More‑info | Tall card design with localized states (Cleaning, Docked, Returning, Paused, Idle, Error) |
+| button / input_button | Trigger | Trigger | Press actions with proper icon styling |
+| input_boolean | Toggle | More‑info | Full toggle functionality |
 | scene | Activate | Activate | Action pill style |
 | script | Run | Run | Same as scenes |
 | camera | Open live view | Open live view | Tall snapshot tile |
-| binary_sensor / sensor | Status only | More‑info | Used in Status/Security summaries |
+| binary_sensor (smoke) | Status only | More‑info | Shows "Detected" / "Not Detected" status |
+| binary_sensor (gas) | Status only | More‑info | Shows "Detected" / "Not Detected" status with gas icon |
+| binary_sensor (flood/moisture) | Status only | More‑info | Shows "Detected" / "Not Detected" status with water alert icon |
+| sensor / other binary_sensors | Status only | More‑info | Used in Status/Security summaries |
+| Extra Accessories | Custom inclusion | More‑info | Manually include any Home Assistant entity not in standard domains |
 
 **Switch handling:** Regular switches are excluded by default (to avoid clutter from technical / helper switches). Outlets (device_class=outlet) are always shown. You can enable all switches or selectively add specific ones via customization.
 
 ---
-## 🏡 Views Generated
+## 🆕 Recent Improvements (v1.1.2 & v1.1.1)
+
+### Automatic Dashboard Updates
+- Dashboard now automatically adapts to changes without requiring page refresh
+  - Entity and device area changes reflect immediately
+  - Hidden, disabled, or deleted entities are automatically removed
+  - Area registry changes update instantly
+  - RTL/language changes trigger automatic re-render
+
+### Enhanced Device Support
+- **Robot Vacuum Support**: Full `vacuum` domain support with tall card design and localized state text
+- **Gas & Flood Sensors**: Added support for gas sensors and flood/moisture sensors with proper icons and "Detected" / "Not Detected" status
+- **Button Entities**: Support for `button` and `input_button` domains with press actions
+- **Input Boolean**: Full toggle functionality support
+- **Extra Accessories**: Manually include any Home Assistant entity not in standard domains
+
+### UI/UX Enhancements
+- **iOS 26 Liquid Glass Design**: Circular buttons with frosted backdrop blur and gradient glow borders
+- **Improved Drag & Drop**: Enhanced SortableJS integration with smoother touch support and variable-speed edge scrolling
+- **Responsive Breakpoint System**: 5 comprehensive breakpoints for mobile, tablet, and desktop (including single-column mode for small screens)
+- **Smart Camera Carousel**: Shows 1.5 cameras on small mobile with intelligent layout for single/dual cameras
+- **Accessibility**: `prefers-reduced-motion` support and fluid typography with `clamp()`
+
+### Bug Fixes
+- **Temperature Unit Detection**: Fixed temperature showing correct unit (°C/°F) for climate states
+- **iOS Safari Background**: Fixed background display issues on iOS Safari with pseudo-element approach
+- **Card Interactivity**: Fixed cards becoming unclickable after navigation
+- **Drag & Drop**: Fixed section reorder drag and drop after v1.1.0 updates
+
+---
 
 ![Room Page](assets/room_page.png)
 

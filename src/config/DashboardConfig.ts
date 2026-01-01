@@ -28,6 +28,7 @@ export enum DeviceGroup {
   SECURITY = 'security',
   WATER = 'water',
   MEDIA = 'media',
+  VACUUM = 'vacuum',
   OTHER = 'other'
 }
 
@@ -91,6 +92,11 @@ export class DashboardConfig {
       icon: 'mdi:speaker',
       name: () => localize('groups.media')
     },
+    [DeviceGroup.VACUUM]: {
+      iconColor: '#ff9500', // Soft orange for vacuums (Apple Home style)
+      icon: 'mdi:robot-vacuum',
+      name: () => localize('groups.vacuum')
+    },
     [DeviceGroup.OTHER]: {
       iconColor: '#ffcc0f', // Yellow for switches/outlets (same as lights)
       icon: 'mdi:light-switch',
@@ -113,7 +119,7 @@ export class DashboardConfig {
     'camera': DeviceGroup.SECURITY,
     'binary_sensor': DeviceGroup.SECURITY, // Motion, occupancy, contact sensors
     'sensor': DeviceGroup.SECURITY,
-    'vacuum': DeviceGroup.OTHER // Robot vacuums
+    'vacuum': DeviceGroup.VACUUM // Robot vacuums
   };
 
   // =====================================================================

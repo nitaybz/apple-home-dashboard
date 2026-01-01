@@ -322,9 +322,6 @@ export class AppleChips {
     if (this.onRenderCallback) {
       this.onRenderCallback();
     }
-    
-    // Force carousel styling after render (especially important for header context)
-    setTimeout(() => this.forceCarouselStyling(), 50);
   }
 
   private updateChipData() {
@@ -438,44 +435,52 @@ export class AppleChips {
       <style>
         :host {
           --media-active-icon-color: ${mediaActiveIconColor};
+          --chip-background-color: var(--apple-chip-bg-inactive, rgba(56, 56, 56, 0.46));
         }
         
-        .apple-chips-container {
+        /* Match StatusSection structure exactly */
+        .apple-chips-section {
           display: block;
-          padding: 0;
-          margin-top: 10px;
+          margin-top: 8px;
           width: 100%;
-          height: 56px;
         }
 
-        .chips-container {
-          display: flex;
-          gap: 12px;
-          flex-wrap: nowrap;
-          align-items: center;
+        /* Use identical structure as status-carousel-container */
+        .chips-carousel-container {
           overflow-x: auto;
           overflow-y: hidden;
-          scroll-behavior: smooth;
+          margin-inline-start: calc(-1 * var(--page-padding, 22px));
+          margin-inline-end: calc(-1 * var(--page-padding, 22px));
           -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
           -ms-overflow-style: none;
-          padding: 0 2px;
-          width: 100%;
-          height: 56px;
         }
-
-        .chips-container::-webkit-scrollbar {
+        
+        .chips-carousel-container::-webkit-scrollbar {
           display: none;
         }
 
-        .carousel-grid.chips {
-          display: flex;
-          gap: 12px;
+        .chips-grid {
+          display: inline-flex;
+          gap: 10px;
           align-items: center;
-          padding: 0;
-          margin: 0;
-          min-height: 36px; /* Maintain consistent height during drag */
+          padding-inline-start: var(--page-padding, 22px);
+          padding-inline-end: var(--page-padding, 22px);
+          min-width: 100%;
+          box-sizing: border-box;
+          height: 44px;
         }
+        
+        /* RTL support */
+        .chips-carousel-container.rtl {
+          direction: rtl;
+        }
+        
+        .chips-carousel-container.ltr {
+          direction: ltr;
+        }
+
+        /* Chip drag placeholder styling */
 
         .chip-wrapper {
           flex-shrink: 0;
@@ -496,14 +501,14 @@ export class AppleChips {
           /* Keep the same size as the original chip to maintain layout */
           display: flex;
           align-items: center;
-          min-height: 36px;
+          min-height: var(--apple-chip-height, 32px);
         }
 
         .chip {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 4px 20px 4px 10px;
+          gap: var(--apple-chip-gap, 6px);
+          padding: var(--apple-chip-padding, 3px 16px 3px 8px);
           border-radius: 50px;
           background: var(--chip-background-color);
           backdrop-filter: blur(20px);
@@ -515,14 +520,14 @@ export class AppleChips {
           user-select: none;
           -webkit-user-select: none;
           -webkit-tap-highlight-color: transparent;
-          min-height: 36px;
+          min-height: var(--apple-chip-height, 32px);
           white-space: nowrap;
           position: relative; /* Ensure proper positioning during drag */
         }
 
         /* RTL chips - swap left/right padding */
-        .chips-container.rtl .chip {
-          padding: 4px 10px 4px 20px;
+        .chips-carousel-container.rtl .chip {
+          padding: 3px 8px 3px 16px;
         }
 
         /* Ensure chips maintain their position during drag operations */
@@ -536,13 +541,13 @@ export class AppleChips {
         }
 
         .chip.active {
-          background: rgba(255, 255, 255, 0.9) !important;
+          background: var(--apple-chip-bg-active, rgba(255, 255, 255, 0.9)) !important;
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
         }
 
         .chip.active .chip-group-name {
-          color: #1f1f1f !important;
+          color: var(--apple-text-active, #1f1f1f) !important;
         }
 
         .chip.active .chip-status {
@@ -559,28 +564,34 @@ export class AppleChips {
         }
 
         .chip-icon {
-          width: 24px;
-          height: 24px;
+          width: var(--apple-chip-icon-size, 24px);
+          height: var(--apple-chip-icon-size, 24px);
           display: flex;
           align-items: center;
           justify-content: center;
+          align-self: center;
           color: var(--chip-icon-color);
+          flex-shrink: 0;
         }
 
         .chip-icon ha-icon {
-          width: 24px;
-          height: 24px;
+          width: var(--apple-chip-icon-size, 24px);
+          height: var(--apple-chip-icon-size, 24px);
+          --mdc-icon-size: var(--apple-chip-icon-size, 24px);
           color: var(--chip-icon-color);
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .chip-content {
           display: flex;
           flex-direction: column;
-          gap: 1px;
+          gap: 0px;
         }
 
         .chip-group-name {
-          font-size: 14px;
+          font-size: var(--apple-chip-name-size, 13px);
           font-weight: 600;
           color: white;
           line-height: 1.2;
@@ -588,46 +599,46 @@ export class AppleChips {
         }
 
         .chip-status {
-          font-size: 12px;
+          font-size: var(--apple-chip-status-size, 11px);
           font-weight: 500;
           color: rgba(255, 255, 255, 0.7);
           line-height: 1.2;
         }
         
-        /* Responsive chip sizing */
+        /* Responsive chip sizing - uses CSS variables from LiquidGlassStyles.ts */
         @media (max-width: 479px) {
-          .chips-container {
-            gap: 8px;
+          .chips-grid {
+            gap: var(--apple-chip-gap, 8px);
           }
           
           .chip {
-            padding: 4px 14px 4px 8px;
-            min-height: 32px;
+            padding: var(--apple-chip-padding, 4px 14px 4px 8px);
+            min-height: var(--apple-chip-height, 32px);
           }
           
           .chip-icon {
-            width: 20px;
-            height: 20px;
+            width: var(--apple-chip-icon-size, 20px);
+            height: var(--apple-chip-icon-size, 20px);
           }
           
           .chip-icon ha-icon {
-            width: 20px;
-            height: 20px;
-            --mdc-icon-size: 20px;
+            width: var(--apple-chip-icon-size, 20px);
+            height: var(--apple-chip-icon-size, 20px);
+            --mdc-icon-size: var(--apple-chip-icon-size, 20px);
           }
           
           .chip-group-name {
-            font-size: 13px;
+            font-size: var(--apple-chip-name-size, 13px);
           }
           
           .chip-status {
-            font-size: 11px;
+            font-size: var(--apple-chip-status-size, 11px);
           }
         }
         
         /* Extra small screens */
         @media (max-width: 359px) {
-          .chips-container {
+          .chips-grid {
             gap: 6px;
           }
           
@@ -638,18 +649,18 @@ export class AppleChips {
           }
           
           .chip-icon {
-            width: 18px;
-            height: 18px;
+            width: var(--apple-chip-icon-size, 18px);
+            height: var(--apple-chip-icon-size, 18px);
           }
           
           .chip-icon ha-icon {
-            width: 18px;
-            height: 18px;
-            --mdc-icon-size: 18px;
+            width: var(--apple-chip-icon-size, 18px);
+            height: var(--apple-chip-icon-size, 18px);
+            --mdc-icon-size: var(--apple-chip-icon-size, 18px);
           }
           
           .chip-group-name {
-            font-size: 12px;
+            font-size: var(--apple-chip-name-size, 12px);
           }
           
           .chip-status {
@@ -659,13 +670,13 @@ export class AppleChips {
         
         /* RTL chips on small screens */
         @media (max-width: 479px) {
-          .chips-container.rtl .chip {
+          .chips-carousel-container.rtl .chip {
             padding: 4px 8px 4px 14px;
           }
         }
         
         @media (max-width: 359px) {
-          .chips-container.rtl .chip {
+          .chips-carousel-container.rtl .chip {
             padding: 3px 6px 3px 12px;
           }
         }
@@ -693,9 +704,9 @@ export class AppleChips {
           90% { transform: translateX(-1px) rotate(-0.6deg); }
         }
       </style>
-      <div class="apple-chips-container">
-        <div class="chips-container carousel-container ${RTLHelper.isRTL() ? 'rtl' : 'ltr'}">
-          <div class="carousel-grid chips" data-area-id="chips" data-section-type="chips">
+      <div class="apple-chips-section">
+        <div class="chips-carousel-container ${RTLHelper.isRTL() ? 'rtl' : 'ltr'}">
+          <div class="chips-grid" data-area-id="chips" data-section-type="chips">
             ${this.chips.map(chip => `
               <div class="chip-wrapper ${this.editMode ? 'edit-mode' : ''}" 
                    data-entity-id="${chip.group}" 
@@ -734,31 +745,6 @@ export class AppleChips {
       this.container.innerHTML = '';
       this.lastRenderedHash = '';
       this.statusTextCache.clear(); // Clear status text cache
-    }
-  }
-
-  // Debug method to check if we're in header context
-  private isInHeaderContext(): boolean {
-    return this.container?.closest('.apple-header-scrolled-chips') !== null;
-  }
-
-  // Force carousel styling for debugging
-  forceCarouselStyling() {
-    if (!this.container) return;
-    
-    const isHeader = this.isInHeaderContext();
-    
-    const chipsContainer = this.container.querySelector('.chips-container') as HTMLElement;
-    if (chipsContainer) {
-      chipsContainer.style.overflowX = 'auto';
-      chipsContainer.style.overflowY = 'hidden';
-      chipsContainer.style.width = '100%';
-    }
-    
-    if (isHeader) {
-      // Apply header-specific fixes
-      this.container.style.width = '100%';
-      this.container.style.overflowX = 'auto';
     }
   }
 

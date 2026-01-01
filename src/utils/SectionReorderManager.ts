@@ -256,7 +256,7 @@ export class SectionReorderManager {
         max-width: 90vw;
         max-height: 80vh;
         background: rgba(28, 28, 30, 1);
-        border-radius: 16px;
+        border-radius: var(--apple-modal-radius, 20px);
         overflow-y: auto;
         overflow-x: hidden;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
@@ -323,7 +323,7 @@ export class SectionReorderManager {
 
       .sections-list {
         padding: 0;
-        border-radius: 10px !important;
+        border-radius: var(--apple-input-radius, 10px) !important;
         overflow: hidden;
         margin: 15px;
       }
@@ -458,7 +458,7 @@ export class SectionReorderManager {
           height: calc(100dvh - env(safe-area-inset-top) - 20px);
           max-width: 100vw;
           max-height: calc(100dvh - env(safe-area-inset-top) - 20px);
-          border-radius: 16px 16px 0 0;
+          border-radius: var(--apple-modal-radius, 20px) var(--apple-modal-radius, 20px) 0 0;
           transform: translateY(100%);
           opacity: 1;
           margin: 0;

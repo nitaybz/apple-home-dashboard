@@ -42,20 +42,20 @@ export class DragAndDropManager {
         opacity: 0.95 !important;
         box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5) !important;
         transform: scale(1.03) rotate(2deg) !important;
-        border-radius: 16px !important;
+        border-radius: var(--apple-card-radius, 25px) !important;
         transition: transform 0.1s ease, box-shadow 0.1s ease !important;
         overflow: hidden !important;
       }
       
       .drag-visual-clone.chip {
-        border-radius: 20px !important;
+        border-radius: var(--apple-chip-radius, 50px) !important;
       }
       
       /* Ghost - the placeholder showing where item will drop */
       .sortable-ghost {
         opacity: 0.3 !important;
         background: rgba(255, 255, 255, 0.1) !important;
-        border-radius: 16px !important;
+        border-radius: var(--apple-card-radius, 25px) !important;
       }
       
       /* Hide controls on ghost and dragged elements */
@@ -78,7 +78,7 @@ export class DragAndDropManager {
       .chip-wrapper.sortable-ghost {
         opacity: 0.3 !important;
         background: rgba(255, 255, 255, 0.1) !important;
-        border-radius: 20px !important;
+        border-radius: var(--apple-chip-radius, 50px) !important;
       }
       .chip-wrapper.sortable-ghost .chip {
         opacity: 0.3 !important;
@@ -692,7 +692,7 @@ export class DragAndDropManager {
   }
 
   enableChipsCarousel(container: HTMLElement): void {
-    const chipsCarousel = container.querySelector('.carousel-grid.chips') as HTMLElement;
+    const chipsCarousel = container.querySelector('.chips-grid') as HTMLElement;
     if (!chipsCarousel) return;
     
     const existingInstance = this.sortableInstances.get(chipsCarousel);

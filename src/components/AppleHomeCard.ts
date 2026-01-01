@@ -548,7 +548,7 @@ export class AppleHomeCard extends HTMLElement {
         .error-card {
           background: rgba(255, 59, 48, 0.1);
           border: 1px solid rgba(255, 59, 48, 0.3);
-          border-radius: 16px;
+          border-radius: var(--apple-card-radius, 25px);
           padding: 16px;
           display: flex;
           flex-direction: column;
@@ -581,15 +581,15 @@ export class AppleHomeCard extends HTMLElement {
         display: block;
         width: 100%;
         height: 100%;
-        /* CSS custom properties for responsive sizing */
-        --card-icon-size: 44px;
-        --card-icon-font-size: 24px;
-        --card-name-font-size: 17px;
-        --card-state-font-size: 15px;
-        --card-padding: 10px;
-        --card-gap: 16px;
-        --temp-font-size-regular: 14px;
-        --temp-font-size-tall: 42px;
+        /* CSS custom properties for responsive sizing - using design tokens */
+        --card-icon-size: 38px;
+        --card-icon-font-size: 20px;
+        --card-name-font-size: var(--apple-card-name-size, 15px);
+        --card-state-font-size: var(--apple-card-state-size, 13px);
+        --card-padding: var(--apple-card-padding, 10px);
+        --card-gap: 12px;
+        --temp-font-size-regular: 13px;
+        --temp-font-size-tall: 38px;
       }
       
       /* Reduce motion for accessibility */
@@ -604,22 +604,8 @@ export class AppleHomeCard extends HTMLElement {
       /* Mobile adjustments */
       @media (max-width: 767px) {
         :host {
-          --card-icon-size: 40px;
-          --card-icon-font-size: 22px;
-          --card-name-font-size: 15px;
-          --card-state-font-size: 13px;
-          --card-padding: 8px;
-          --card-gap: 12px;
-          --temp-font-size-regular: 13px;
-          --temp-font-size-tall: 36px;
-        }
-      }
-      
-      /* Small mobile adjustments */
-      @media (max-width: 479px) {
-        :host {
-          --card-icon-size: 38px;
-          --card-icon-font-size: 20px;
+          --card-icon-size: 36px;
+          --card-icon-font-size: 18px;
           --card-name-font-size: 14px;
           --card-state-font-size: 12px;
           --card-padding: 8px;
@@ -629,17 +615,31 @@ export class AppleHomeCard extends HTMLElement {
         }
       }
       
+      /* Small mobile adjustments */
+      @media (max-width: 479px) {
+        :host {
+          --card-icon-size: 34px;
+          --card-icon-font-size: 18px;
+          --card-name-font-size: 13px;
+          --card-state-font-size: 11px;
+          --card-padding: 8px;
+          --card-gap: 8px;
+          --temp-font-size-regular: 11px;
+          --temp-font-size-tall: 28px;
+        }
+      }
+      
       /* Extra small / accessibility */
       @media (max-width: 359px) {
         :host {
-          --card-icon-size: 36px;
-          --card-icon-font-size: 18px;
-          --card-name-font-size: 14px;
-          --card-state-font-size: 12px;
+          --card-icon-size: 32px;
+          --card-icon-font-size: 16px;
+          --card-name-font-size: 13px;
+          --card-state-font-size: 11px;
           --card-padding: 8px;
-          --card-gap: 10px;
-          --temp-font-size-regular: 12px;
-          --temp-font-size-tall: 28px;
+          --card-gap: 8px;
+          --temp-font-size-regular: 11px;
+          --temp-font-size-tall: 26px;
         }
       }
       

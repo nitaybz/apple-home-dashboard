@@ -1,8 +1,170 @@
 /**
- * iOS 26 Liquid Glass Button Styles
- * Centralized styles for glass effect buttons used throughout the dashboard.
- * Import and inject these styles once, then use the CSS classes.
+ * iOS 26 Liquid Glass Design System
+ * Centralized styles for glass effect buttons and design tokens used throughout the dashboard.
+ * Import and inject these styles once, then use the CSS classes and variables.
  */
+
+/**
+ * CSS Custom Properties (Design Tokens) for consistent styling across components.
+ * These should be injected at the :root level for global access.
+ */
+export const designTokensCSS = `
+    :root {
+      /* ============================================
+         Apple Home Design Tokens
+         ============================================ */
+      
+      /* Border Radius */
+      --apple-card-radius: 22px;
+      --apple-modal-radius: 22px;
+      --apple-chip-radius: 50px;
+      --apple-input-radius: 10px;
+      --apple-toggle-radius: 11px;
+      --apple-button-radius: 50%;
+      
+      /* Action Button Size - Unified size for all action buttons */
+      --apple-action-btn-size: 40px;
+      --apple-action-icon-size: 22px;
+      
+      /* Card Heights */
+      --apple-card-height: 70px;
+      --apple-card-height-tablet: 66px;
+      --apple-card-height-mobile: 64px;
+      --apple-card-height-small: 60px;
+      --apple-card-height-xs: 56px;
+      
+      /* Camera Heights */
+      --apple-camera-height: 180px;
+      --apple-camera-height-tablet: 160px;
+      --apple-camera-height-mobile: 150px;
+      --apple-camera-height-small: 140px;
+      
+      /* Typography */
+      --apple-title-size: 28px;
+      --apple-section-title-size: 17px;
+      --apple-card-name-size: 15px;
+      --apple-card-state-size: 13px;
+      
+      /* Chip Sizes */
+      --apple-chip-height: 32px;
+      --apple-chip-padding: 3px 16px 3px 8px;
+      --apple-chip-gap: 6px;
+      --apple-chip-icon-size: 24px;
+      --apple-chip-name-size: 13px;
+      --apple-chip-status-size: 11px;
+      
+      /* Spacing */
+      --apple-section-gap: 20px;
+      --apple-card-gap: 10px;
+      --apple-card-padding: 10px;
+      
+      /* Page Padding - horizontal padding for the dashboard */
+      --apple-page-padding: 22px;
+      --apple-page-padding-bottom: 22px;
+      
+      /* ============================================
+         Card & Chip Background Colors
+         Change transparency from one place for all cards/chips
+         ============================================ */
+      
+      /* Inactive/Off state backgrounds */
+      --apple-card-bg-inactive: rgba(0, 0, 0, 0.3);
+      --apple-chip-bg-inactive: rgba(0, 0, 0, 0.3);
+      --apple-icon-bg-inactive: rgba(0, 0, 0, 0.2);
+      
+      /* Active/On state backgrounds */
+      --apple-card-bg-active: #ffffff;
+      --apple-chip-bg-active: rgba(255, 255, 255, 0.9);
+      
+      /* Text colors */
+      --apple-text-inactive: #ffffff;
+      --apple-text-active: #1d1d1f;
+      --apple-icon-inactive: rgba(142, 142, 147, 0.8);
+      
+      /* ============================================
+         Grid Columns - Card span values (out of 12 column grid)
+         Lower span = more columns: span 2 = 6 cols, span 3 = 4 cols, span 4 = 3 cols, span 6 = 2 cols
+         
+         BREAKPOINT REFERENCE (container width, accounting for 44px padding):
+         - XL:      >= 1356px container (1400px+ viewport)  → 6 columns
+         - Large:   1056-1355px container (1100-1399px viewport) → 4 columns
+         - Medium:  756-1055px container (800-1099px viewport) → 4 columns
+         - Tablet:  556-755px container (600-799px viewport) → 3 columns
+         - Mobile:  356-555px container (400-599px viewport) → 2 columns
+         - Small:   316-355px container (360-399px viewport) → 2 columns
+         - XS:      < 316px container (< 360px viewport) → 1 column
+         ============================================ */
+      --apple-card-span-xl: 2;       /* 6 columns - Extra large screens */
+      --apple-card-span-desktop: 3;  /* 4 columns - Desktop/Large tablets */
+      --apple-card-span-tablet: 4;   /* 3 columns - Tablet portrait */
+      --apple-card-span-mobile: 6;   /* 2 columns - Mobile */
+      --apple-card-span-xs: 12;      /* 1 column - Extra small / accessibility */
+    }
+    
+    /* ============================================
+       Mobile Overrides (< 768px viewport)
+       Smaller typography and buttons for mobile devices
+       ============================================ */
+    @media (max-width: 767px) {
+      :root {
+        /* Typography - Mobile */
+        --apple-title-size: 32px;
+        --apple-section-title-size: 20px;
+        --apple-card-name-size: 16px;
+        --apple-card-state-size: 14px;
+        
+        /* Action Buttons - Mobile */
+        --apple-action-btn-size: 40px;
+        --apple-action-icon-size: 22px;
+        
+        /* Chips - Mobile */
+        --apple-chip-height: 32px;
+        --apple-chip-icon-size: 22px;
+        --apple-chip-name-size: 12px;
+        --apple-chip-status-size: 10px;
+        
+        /* Page Padding - Mobile */
+        --apple-page-padding: 16px;
+        --apple-page-padding-bottom: 16px;
+      }
+    }
+    
+    /* ============================================
+       Small Mobile Overrides (< 400px viewport)
+       Even smaller padding for compact screens
+       ============================================ */
+    @media (max-width: 399px) {
+      :root {
+        /* Page Padding - Small Mobile */
+        --apple-page-padding: 12px;
+        --apple-page-padding-bottom: 12px;
+      }
+    }
+    
+    /* ============================================
+       Extra Small Overrides (< 400px viewport)
+       Even smaller for very compact screens
+       ============================================  */
+    /* @media (max-width: 399px) {
+      :root {
+        /* Typography - Extra Small */
+        --apple-title-size: 22px;
+        --apple-section-title-size: 14px;
+        --apple-card-name-size: 13px;
+        --apple-card-state-size: 11px;
+        
+        /* Action Buttons - Extra Small */
+        --apple-action-btn-size: 34px;
+        --apple-action-icon-size: 18px;
+        
+        /* Chips - Extra Small */
+        --apple-chip-height: 28px;
+        --apple-chip-icon-size: 16px;
+        --apple-chip-name-size: 11px;
+        --apple-chip-status-size: 10px;
+      }
+    } */
+`;
 
 /**
  * The raw CSS string for liquid glass button styles.
@@ -27,6 +189,10 @@ export const liquidGlassCSS = `
       transition: all 0.2s ease !important;
       position: relative;
       isolation: isolate;
+      /* Unified button size */
+      width: var(--apple-action-btn-size, 40px) !important;
+      height: var(--apple-action-btn-size, 40px) !important;
+      min-width: var(--apple-action-btn-size, 40px) !important;
     }
 
     .liquid-glass-btn:active {
@@ -36,88 +202,12 @@ export const liquidGlassCSS = `
     .liquid-glass-btn ha-icon {
       position: relative;
       z-index: 2;
+      --mdc-icon-size: var(--apple-action-icon-size, 22px);
     }
 
     .liquid-glass-btn svg {
       position: relative;
       z-index: 2;
-    }
-
-    /* Small buttons (34px) - for modals */
-    .liquid-glass-btn-sm {
-      width: 34px !important;
-      height: 34px !important;
-      min-width: 34px !important;
-    }
-
-    .liquid-glass-btn-sm ha-icon {
-      --mdc-icon-size: 20px;
-    }
-
-    /* Medium buttons (36px) - for headers */
-    .liquid-glass-btn-md {
-      width: 36px !important;
-      height: 36px !important;
-      min-width: 36px !important;
-    }
-
-    .liquid-glass-btn-md ha-icon {
-      --mdc-icon-size: 22px;
-    }
-
-    /* Mobile adjustments */
-    @media (max-width: 768px) {
-      .liquid-glass-btn-md {
-        width: 34px !important;
-        height: 34px !important;
-        min-width: 34px !important;
-      }
-    }
-    
-    /* Small mobile adjustments */
-    @media (max-width: 479px) {
-      .liquid-glass-btn-md {
-        width: 32px !important;
-        height: 32px !important;
-        min-width: 32px !important;
-      }
-      
-      .liquid-glass-btn-md ha-icon {
-        --mdc-icon-size: 20px;
-      }
-      
-      .liquid-glass-btn-sm {
-        width: 30px !important;
-        height: 30px !important;
-        min-width: 30px !important;
-      }
-      
-      .liquid-glass-btn-sm ha-icon {
-        --mdc-icon-size: 18px;
-      }
-    }
-    
-    /* Extra small / accessibility */
-    @media (max-width: 359px) {
-      .liquid-glass-btn-md {
-        width: 30px !important;
-        height: 30px !important;
-        min-width: 30px !important;
-      }
-      
-      .liquid-glass-btn-md ha-icon {
-        --mdc-icon-size: 18px;
-      }
-      
-      .liquid-glass-btn-sm {
-        width: 28px !important;
-        height: 28px !important;
-        min-width: 28px !important;
-      }
-      
-      .liquid-glass-btn-sm ha-icon {
-        --mdc-icon-size: 16px;
-      }
     }
     
     /* Reduce motion for accessibility */
@@ -130,8 +220,8 @@ export const liquidGlassCSS = `
     /* Transparent glass - reflects background color through blur */
     .liquid-glass-transparent {
       background: rgba(0, 0, 0, 0.2) !important;
-      backdrop-filter: blur(5px) saturate(1.3) !important;
-      -webkit-backdrop-filter: blur(5px) saturate(1.3) !important;
+      backdrop-filter: blur(5px) saturate(1.5) !important;
+      -webkit-backdrop-filter: blur(5px) saturate(1.5) !important;
       box-shadow: 
         inset 0 0 0 1px rgba(255, 255, 255, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.25),
@@ -218,6 +308,28 @@ export const liquidGlassCSS = `
 `;
 
 let stylesInjected = false;
+let tokensInjected = false;
+
+/**
+ * Injects the design tokens (CSS custom properties) into the document head.
+ * Safe to call multiple times - will only inject once.
+ */
+export function injectDesignTokens(): void {
+  if (tokensInjected) return;
+  
+  const existingStyle = document.getElementById('apple-design-tokens');
+  if (existingStyle) {
+    tokensInjected = true;
+    return;
+  }
+
+  const style = document.createElement('style');
+  style.id = 'apple-design-tokens';
+  style.textContent = designTokensCSS;
+
+  document.head.appendChild(style);
+  tokensInjected = true;
+}
 
 /**
  * Injects the liquid glass button styles into the document head.
@@ -226,6 +338,9 @@ let stylesInjected = false;
  * For shadow DOM elements, include liquidGlassCSS in the component's style block.
  */
 export function injectLiquidGlassStyles(): void {
+  // Always inject design tokens first
+  injectDesignTokens();
+  
   if (stylesInjected) return;
   
   const existingStyle = document.getElementById('liquid-glass-styles');
@@ -244,14 +359,15 @@ export function injectLiquidGlassStyles(): void {
 
 /**
  * CSS class combinations for common button types
+ * All buttons now use the same unified size
  */
 export const LiquidGlassClasses = {
-  /** Header buttons (menu, back, sidebar) - 36px, transparent glass */
-  headerButton: 'liquid-glass-btn liquid-glass-btn-md liquid-glass-transparent',
+  /** Header buttons (menu, back, sidebar) - transparent glass */
+  headerButton: 'liquid-glass-btn liquid-glass-transparent',
   
-  /** Modal cancel/X button - 34px, dark glass */
-  modalCancel: 'liquid-glass-btn liquid-glass-btn-sm liquid-glass-dark',
+  /** Modal cancel/X button - dark glass */
+  modalCancel: 'liquid-glass-btn liquid-glass-dark',
   
-  /** Modal done/confirm button - 34px, light glass */
-  modalDone: 'liquid-glass-btn liquid-glass-btn-sm liquid-glass-light',
+  /** Modal done/confirm button - light glass */
+  modalDone: 'liquid-glass-btn liquid-glass-light',
 } as const;

@@ -419,36 +419,40 @@ export class StatusSection {
       <style>
         .apple-status-section {
           display: block;
-          padding: 0;
           margin-top: 10px;
           width: 100%;
-          height: 56px;
         }
         
-        .status-chips-container {
-          display: flex;
-          gap: 36px;
-          flex-wrap: nowrap;
-          align-items: center;
+        /* Use same structure as scenes carousel */
+        .status-carousel-container {
           overflow-x: auto;
           overflow-y: hidden;
-          scroll-behavior: smooth;
+          margin-inline-start: calc(-1 * var(--page-padding, 22px));
+          margin-inline-end: calc(-1 * var(--page-padding, 22px));
           -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
           -ms-overflow-style: none;
-          padding: 0 2px;
-          width: 100%;
-          height: 56px;
         }
         
-        .status-chips-container::-webkit-scrollbar {
+        .status-carousel-container::-webkit-scrollbar {
           display: none;
+        }
+        
+        .status-chips-grid {
+          display: inline-flex;
+          gap: 28px;
+          align-items: center;
+          padding-inline-start: var(--page-padding, 22px);
+          padding-inline-end: var(--page-padding, 22px);
+          min-width: 100%;
+          box-sizing: border-box;
+          height: 48px;
         }
         
         .status-chip {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           background: transparent;
           color: white;
           font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
@@ -457,14 +461,14 @@ export class StatusSection {
           user-select: none;
           -webkit-user-select: none;
           -webkit-tap-highlight-color: transparent;
-          min-height: 36px;
+          min-height: 32px;
           white-space: nowrap;
           flex-shrink: 0;
         }
 
         .status-chip-icon {
-          width: 24px;
-          height: 24px;
+          width: 20px;
+          height: 20px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -472,19 +476,19 @@ export class StatusSection {
         }
         
         .status-chip-icon ha-icon {
-          width: 24px;
-          height: 24px;
+          width: 20px;
+          height: 20px;
           color: white;
         }
         
         .status-chip-content {
           display: flex;
           flex-direction: column;
-          gap: 1px;
+          gap: 0px;
         }
         
         .status-chip-label {
-          font-size: 14px;
+          font-size: var(--apple-chip-name-size, 13px);
           font-weight: 600;
           color: white;
           line-height: 1.2;
@@ -492,25 +496,29 @@ export class StatusSection {
         }
         
         .status-chip-value {
-          font-size: 12px;
+          font-size: var(--apple-chip-status-size, 11px);
           font-weight: 500;
           color: white;
           line-height: 1.2;
           opacity: 0.9;
         }
       </style>
-      <div class="status-chips-container">
-        ${statusItems.map(item => `
-          <div class="status-chip" data-domain="${item.domain}" data-entity-ids="${item.entityIds.join(',')}">
-            <div class="status-chip-icon">
-              <ha-icon icon="${item.icon}"></ha-icon>
-            </div>
-            <div class="status-chip-content">
-              <span class="status-chip-label">${item.label}</span>
-              <span class="status-chip-value">${item.value}</span>
-            </div>
+      <div class="apple-status-section">
+        <div class="status-carousel-container">
+          <div class="status-chips-grid">
+            ${statusItems.map(item => `
+              <div class="status-chip" data-domain="${item.domain}" data-entity-ids="${item.entityIds.join(',')}">
+                <div class="status-chip-icon">
+                  <ha-icon icon="${item.icon}"></ha-icon>
+                </div>
+                <div class="status-chip-content">
+                  <span class="status-chip-label">${item.label}</span>
+                  <span class="status-chip-value">${item.value}</span>
+                </div>
+              </div>
+            `).join('')}
           </div>
-        `).join('')}
+        </div>
       </div>
     `;
   }
@@ -1111,7 +1119,7 @@ export class StatusSection {
         max-width: 90vw;
         max-height: 80vh;
         background: rgba(28, 28, 30, 1);
-        border-radius: 16px;
+        border-radius: var(--apple-modal-radius, 20px);
         overflow-y: auto;
         overflow-x: hidden;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
@@ -1190,10 +1198,12 @@ export class StatusSection {
       .status-modal-cards {
         display: grid;
         grid-template-columns: repeat(12, 1fr);
-        grid-auto-rows: 80px;
-        gap: 12px;
+        grid-auto-rows: var(--apple-card-height, 70px);
+        gap: var(--apple-card-gap, 10px);
         auto-rows: min-content;
-        margin-bottom: 32px;
+        margin-bottom: var(--apple-section-gap, 20px);
+        /* Enable container queries for modal */
+        container-type: inline-size;
       }
       
       .status-modal-cards:last-child {
@@ -1204,8 +1214,8 @@ export class StatusSection {
         display: flex;
         flex-direction: column;
         position: relative;
-        grid-column: span 3;
-        border-radius: 16px;
+        grid-column: span var(--apple-card-span-desktop, 3);
+        border-radius: var(--apple-card-radius, 22px);
         overflow: hidden;
       }
       
@@ -1216,37 +1226,59 @@ export class StatusSection {
       .entity-card-wrapper apple-home-card {
         width: 100%;
         height: 100%;
-        border-radius: 16px;
+        border-radius: var(--apple-card-radius, 22px);
       }
       
-      /* Tablet breakpoint */
-      @media (max-width: 1199px) {
+      /* Large modal (1100px+) - 4 columns */
+      @container (min-width: 900px) {
         .entity-card-wrapper {
-          grid-column: span 4;
+          grid-column: span var(--apple-card-span-desktop, 3);
         }
       }
       
-      /* Mobile breakpoint */
+      /* Medium modal (600px - 899px) - 3 columns */
+      @container (min-width: 600px) and (max-width: 899px) {
+        .entity-card-wrapper {
+          grid-column: span var(--apple-card-span-mobile, 4);
+        }
+      }
+      
+      /* Small modal (400px - 599px) - 2 columns */
+      @container (min-width: 400px) and (max-width: 599px) {
+        .entity-card-wrapper {
+          grid-column: span var(--apple-card-span-small, 6);
+        }
+        
+        .status-modal-cards {
+          grid-auto-rows: 68px;
+          gap: 10px;
+        }
+      }
+      
+      /* Extra small modal (< 400px) - single column */
+      @container (max-width: 399px) {
+        .entity-card-wrapper {
+          grid-column: span 12 !important;
+        }
+        
+        .status-modal-cards {
+          grid-auto-rows: 64px;
+          gap: 8px;
+        }
+      }
+      
+      /* Fallback media queries for older browsers */
       @media (max-width: 767px) {
         .entity-card-wrapper {
           grid-column: span 6;
         }
         
         .status-modal-cards {
-          grid-auto-rows: 72px;
+          grid-auto-rows: 68px;
           gap: 10px;
         }
       }
       
-      /* Small mobile breakpoint */
-      @media (max-width: 479px) {
-        .status-modal-cards {
-          grid-auto-rows: 68px;
-          gap: 8px;
-        }
-      }
-      
-      /* Extra small / accessibility breakpoint - single column */
       @media (max-width: 359px) {
         .entity-card-wrapper {
           grid-column: span 12 !important;
@@ -1263,7 +1295,7 @@ export class StatusSection {
           max-width: 100vw;
           height: calc(100dvh - env(safe-area-inset-top) - 20px);
           max-height: calc(100dvh - env(safe-area-inset-top) - 20px);
-          border-radius: 16px 16px 0 0;
+          border-radius: var(--apple-modal-radius, 20px) var(--apple-modal-radius, 20px) 0 0;
           transform: translateY(100%);
         }
         

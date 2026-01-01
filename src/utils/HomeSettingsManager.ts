@@ -446,7 +446,7 @@ export class HomeSettingsManager {
         max-width: 90vw;
         max-height: 85vh;
         background: rgba(28, 28, 30, 1);
-        border-radius: 14px;
+        border-radius: var(--apple-modal-radius, 20px);
         overflow-y: auto;
         overflow-x: hidden;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
@@ -537,7 +537,7 @@ export class HomeSettingsManager {
 
       .settings-card {
         background: rgba(44, 44, 46, 0.6);
-        border-radius: 12px;
+        border-radius: var(--apple-input-radius, 10px);
         padding: 0 16px 16px 16px;
         position: relative;
         overflow: visible;
@@ -583,7 +583,7 @@ export class HomeSettingsManager {
         padding: 12px 16px;
         background: rgba(39, 39, 39, 0.8);
         border: 1px solid rgba(84, 84, 88, 0.8);
-        border-radius: 8px;
+        border-radius: var(--apple-input-radius, 10px);
         color: white;
         font-size: 14px;
         outline: none;
@@ -606,7 +606,7 @@ export class HomeSettingsManager {
         right: 0;
         background: rgba(44, 44, 46, 0.95);
         border: 1px solid rgba(84, 84, 88, 0.8);
-        border-radius: 8px;
+        border-radius: var(--apple-input-radius, 10px);
         max-height: 200px;
         overflow-y: auto;
         z-index: 1000;
@@ -666,7 +666,7 @@ export class HomeSettingsManager {
         align-items: center;
         background: rgba(255, 175, 0, 0.2);
         border: 1px solid rgba(255, 175, 0, 0.4);
-        border-radius: 16px;
+        border-radius: var(--apple-card-radius, 25px);
         padding: 6px 6px 6px 14px;
         gap: 8px;
         transition: all 0.2s ease;
@@ -709,7 +709,7 @@ export class HomeSettingsManager {
           height: calc(100dvh - env(safe-area-inset-top) - 20px);
           max-width: 100vw;
           max-height: calc(100dvh - env(safe-area-inset-top) - 20px);
-          border-radius: 16px 16px 0 0;
+          border-radius: var(--apple-modal-radius, 20px) var(--apple-modal-radius, 20px) 0 0;
           transform: translateY(100%);
           opacity: 1;
           margin: 0;
@@ -1492,7 +1492,7 @@ export class HomeSettingsManager {
         max-width: 90vw;
         max-height: 85vh;
         background: rgba(28, 28, 30, 1);
-        border-radius: 16px;
+        border-radius: var(--apple-modal-radius, 20px);
         overflow-y: auto;
         overflow-x: hidden;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
@@ -1558,7 +1558,7 @@ export class HomeSettingsManager {
 
       .preset-option {
         cursor: pointer;
-        border-radius: 16px;
+        border-radius: var(--apple-card-radius, 25px);
         padding: 8px;
         background: rgba(255, 255, 255, 0.05);
         transition: all 0.3s ease;
@@ -1596,7 +1596,7 @@ export class HomeSettingsManager {
       .preset-preview {
         width: 100%;
         height: 100px;
-        border-radius: 8px;
+        border-radius: var(--apple-input-radius, 10px);
         background-size: cover !important;
         background-position: center !important;
         margin-bottom: 8px;
@@ -1628,7 +1628,7 @@ export class HomeSettingsManager {
           height: calc(100dvh - env(safe-area-inset-top) - 20px);
           max-width: 100vw;
           max-height: calc(100dvh - env(safe-area-inset-top) - 20px);
-          border-radius: 16px 16px 0 0;
+          border-radius: var(--apple-modal-radius, 20px) var(--apple-modal-radius, 20px) 0 0;
           transform: translateY(100%);
           opacity: 1;
           margin: 0;

@@ -13,6 +13,7 @@ import { RoomPage } from '../pages/RoomPage';
 import { ScenesPage } from '../pages/ScenesPage';
 import { CamerasPage } from '../pages/CamerasPage';
 import { DeviceGroup } from '../config/DashboardConfig';
+import { RegistrySubscriptionManager, RegistryChangeCallback } from '../utils/RegistrySubscriptionManager';
 
 export class AppleHomeView extends HTMLElement {
   // Dashboard-specific management - keyed by dashboard URL base
@@ -31,6 +32,12 @@ export class AppleHomeView extends HTMLElement {
   private visibilityChangeHandler?: () => void; // Add visibility change handler
   private globalRefreshHandler?: (event: Event) => void; // Add global refresh handler
   private currentDashboardKey: string = 'default'; // Track current dashboard key
+  
+  // Registry subscription handlers for automatic updates
+  private registrySubscriptionManager?: RegistrySubscriptionManager;
+  private registryChangeHandler?: RegistryChangeCallback;
+  private rtlChangeHandler?: (isRTL: boolean, language: string) => void;
+  private _lastLanguage?: string; // Track language for change detection
   
   // Helper methods for dashboard-specific management
   private getDashboardKey(): string {
@@ -127,6 +134,12 @@ export class AppleHomeView extends HTMLElement {
     };
     document.addEventListener('apple-home-dashboard-refresh', this.globalRefreshHandler);
     
+    // Set up registry subscription manager for automatic updates
+    this.setupRegistrySubscriptions();
+    
+    // Set up RTL change detection
+    this.setupRTLChangeDetection();
+    
     // Note: Dashboard registration is handled by the strategy when it generates the dashboard
     // The DashboardStateManager tracks which dashboards are Apple Home dashboards
     
@@ -143,6 +156,12 @@ export class AppleHomeView extends HTMLElement {
     if (this.globalRefreshHandler) {
       document.removeEventListener('apple-home-dashboard-refresh', this.globalRefreshHandler);
     }
+    
+    // Clean up registry subscription handlers
+    this.cleanupRegistrySubscriptions();
+    
+    // Clean up RTL change detection
+    this.cleanupRTLChangeDetection();
     
     // Clean up instance-specific header callbacks
     if (this.refreshCallback) {
@@ -183,6 +202,103 @@ export class AppleHomeView extends HTMLElement {
       
     } catch (error) {
       console.error('🏠 APPLE HOME: Error during global refresh:', error);
+    }
+  }
+
+  /**
+   * Set up registry subscription manager for automatic updates
+   * This handles: entity area changes, device moves, entity hide/delete/disable
+   */
+  private setupRegistrySubscriptions(): void {
+    this.registrySubscriptionManager = RegistrySubscriptionManager.getInstance();
+    
+    // Create the handler for registry changes
+    this.registryChangeHandler = (event) => {
+      // Skip refresh during edit mode to prevent breaking drag and drop
+      if (this.editModeManager?.editMode) {
+        return;
+      }
+      
+      // Trigger a full refresh when registry changes
+      this.handleRegistryChange(event.type);
+    };
+    
+    this.registrySubscriptionManager.addListener(this.registryChangeHandler);
+    
+    // Initialize with hass if available
+    if (this._hass) {
+      this.registrySubscriptionManager.setHass(this._hass);
+    }
+  }
+
+  /**
+   * Clean up registry subscriptions
+   */
+  private cleanupRegistrySubscriptions(): void {
+    if (this.registryChangeHandler && this.registrySubscriptionManager) {
+      this.registrySubscriptionManager.removeListener(this.registryChangeHandler);
+    }
+    this.registryChangeHandler = undefined;
+  }
+
+  /**
+   * Handle registry changes (entity, device, area updates)
+   */
+  private async handleRegistryChange(changeType: string): Promise<void> {
+    // Skip if not rendered or transitioning
+    if (!this._rendered || this._isTransitioning || !this._hass) {
+      return;
+    }
+    
+    // Skip if in edit mode
+    if (this.editModeManager?.editMode) {
+      return;
+    }
+    
+    // Force a complete refresh to pick up registry changes
+    this._rendered = false;
+    await this.renderPage(`registryChange-${changeType}`);
+  }
+
+  /**
+   * Set up RTL change detection
+   */
+  private setupRTLChangeDetection(): void {
+    this.rtlChangeHandler = (isRTL: boolean, language: string) => {
+      // Handle RTL/language change
+      this.handleRTLChange(isRTL, language);
+    };
+    
+    RTLHelper.addListener(this.rtlChangeHandler);
+  }
+
+  /**
+   * Clean up RTL change detection
+   */
+  private cleanupRTLChangeDetection(): void {
+    if (this.rtlChangeHandler) {
+      RTLHelper.removeListener(this.rtlChangeHandler);
+    }
+    this.rtlChangeHandler = undefined;
+  }
+
+  /**
+   * Handle RTL/language changes
+   */
+  private handleRTLChange(isRTL: boolean, language: string): void {
+    // Update wrapper content direction class
+    if (this.content) {
+      const wrapperContent = this.shadowRoot?.querySelector('.wrapper-content');
+      if (wrapperContent) {
+        wrapperContent.classList.remove('rtl', 'ltr');
+        wrapperContent.classList.add(isRTL ? 'rtl' : 'ltr');
+      }
+    }
+    
+    // Force re-render to update all RTL-dependent UI elements
+    if (this._rendered && !this._isTransitioning) {
+      this._rendered = false;
+      this.renderPage('rtlChange');
     }
   }
 
@@ -398,6 +514,19 @@ export class AppleHomeView extends HTMLElement {
     this.customizationManager.setHass(hass);
     this.appleHeader.setHass(hass);
     
+    // Update registry subscription manager with new hass
+    if (this.registrySubscriptionManager) {
+      this.registrySubscriptionManager.setHass(hass);
+    }
+    
+    // Check for RTL/language changes on every hass update
+    const currentLanguage = hass?.locale?.language || hass?.language;
+    if (this._lastLanguage && currentLanguage && this._lastLanguage !== currentLanguage) {
+      // Language changed - check for RTL change
+      RTLHelper.checkForChanges(hass);
+    }
+    this._lastLanguage = currentLanguage;
+    
     // Only load customizations on first hass set, not on every hass update
     // This prevents unnecessary re-rendering and title updates on entity state changes
     const isFirstHassSet = !oldHass;
@@ -567,18 +696,21 @@ export class AppleHomeView extends HTMLElement {
           
           :host {
             display: block;
-            padding: 0 22px 22px 22px;
+            padding: 0 var(--apple-page-padding, 22px) var(--apple-page-padding-bottom, 22px) var(--apple-page-padding, 22px);
             box-sizing: border-box;
             width: 100%;
             background: transparent;
             position: relative;
-            /* CSS custom properties for responsive sizing */
-            --card-gap: 12px;
-            --card-row-height: 80px;
-            --section-margin: 32px;
-            --title-font-size: 34px;
-            --section-title-font-size: 20px;
-            --page-padding: 22px;
+            /* Enable container queries - responds to available space, not screen */
+            container-type: inline-size;
+            container-name: apple-home-view;
+            /* CSS custom properties for responsive sizing - using design tokens */
+            --card-gap: var(--apple-card-gap, 10px);
+            --card-row-height: var(--apple-card-height, 70px);
+            --section-margin: var(--apple-section-gap, 20px);
+            --title-font-size: var(--apple-title-size, 28px);
+            --section-title-font-size: var(--apple-section-title-size, 17px);
+            --page-padding: var(--apple-page-padding, 22px);
           }
           
           /* Reduce motion for accessibility */
@@ -603,11 +735,11 @@ export class AppleHomeView extends HTMLElement {
           
           /* Page title (big title below header) */
           .apple-page-title {
-            font-size: clamp(24px, 7vw, var(--title-font-size));
-            font-weight: 700;
+            font-size: clamp(22px, 6vw, var(--title-font-size));
+            font-weight: 600;
             color: #ffffff;
-            margin: 0 0 14px 0;
-            letter-spacing: -0.8px;
+            margin: 0 0 10px 0;
+            letter-spacing: -0.5px;
             line-height: 1.2;
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
             display: block;
@@ -618,12 +750,12 @@ export class AppleHomeView extends HTMLElement {
             margin-bottom: var(--section-margin);
           }
           .area-title {
-            font-weight: 500;
-            font-size: clamp(17px, 4.5vw, var(--section-title-font-size));
+            font-weight: 600;
+            font-size: var(--section-title-font-size);
             color: #fff;
-            margin: 30px 0 6px;
+            margin: 20px 0 6px;
             padding: 0;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -631,12 +763,12 @@ export class AppleHomeView extends HTMLElement {
 
           /* Special section titles (Scenes, Cameras) */
           .apple-home-section-title {
-            font-size: clamp(17px, 4.5vw, var(--section-title-font-size));
-            font-weight: 500;
+            font-size: var(--section-title-font-size);
+            font-weight: 600;
             color: #fff;
-            margin: 30px 0 6px;
+            margin: 20px 0 6px;
             padding: 0;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.2px;
           }
 
           /* Clickable section titles with arrows */
@@ -654,7 +786,7 @@ export class AppleHomeView extends HTMLElement {
 
           .clickable-section-title .section-arrow {
             color: rgba(255, 255, 255, 0.6);
-            --mdc-icon-size: clamp(22px, 5vw, 26px);
+            --mdc-icon-size: 22px;
             transition: color 0.2s ease;
           }
 
@@ -662,14 +794,16 @@ export class AppleHomeView extends HTMLElement {
           .permanent-chips + .apple-home-section-title, .permanent-chips + .area-title,
           .apple-status-section + .apple-home-section-title,
           .apple-status-section + .area-title {
-            margin: 16px 0 6px;
+            margin: 12px 0 6px;
           }
 
-          /* Carousel grid styles */
+          /* Carousel grid styles - extends to screen edge like Apple Home */
           .carousel-container {
             overflow-x: auto;
             overflow-y: hidden;
             margin-bottom: var(--section-margin);
+            margin-inline-start: calc(-1 * var(--page-padding, 22px));
+            margin-inline-end: calc(-1 * var(--page-padding, 22px));
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none; /* IE/Edge */
@@ -681,20 +815,45 @@ export class AppleHomeView extends HTMLElement {
           }
 
           .carousel-grid {
-            display: flex;
+            display: inline-flex;
             gap: var(--card-gap);
+            padding-inline-start: var(--page-padding, 22px);
+            padding-inline-end: var(--page-padding, 22px);
+            min-width: 100%;
+            box-sizing: border-box;
+          }
+
+          /* Scenes carousel - cards about 90% of regular card width like Apple Home */
+          .carousel-grid.scenes {
+            gap: var(--card-gap);
+          }
+          
+          .carousel-grid.scenes .entity-card-wrapper {
+            /* Scene cards are 90% of regular card width and height */
+            /* 4 columns: (100cqw - 3 gaps) / 4 * 0.9 */
+            flex: 0 0 calc((100cqw - 3 * var(--card-gap, 10px)) / 4 * 0.9);
+            height: calc(var(--card-row-height, 70px) * 0.9);
           }
 
           /* Camera carousel - Apple-style tight grid */
           .carousel-grid.cameras {
             gap: 2px; /* Very tight spacing like Apple Home */
-            padding: 0 2px; /* Small padding to allow for outer border radius */
+            /* Remove end padding as we'll use a spacer approach for percentage-based widths */
+            padding-inline-end: 0;
+          }
+          
+          /* Camera carousel: add spacer at end to maintain edge padding */
+          .carousel-grid.cameras::after {
+            content: '';
+            flex-shrink: 0;
+            width: var(--page-padding, 22px);
+            min-width: var(--page-padding, 22px);
           }
 
           .carousel-grid .entity-card-wrapper {
             flex: 0 0 auto;
             width: calc(23% - 9px); /* Match regular grid sizing (span 3 of 12) */
-            height: 70px;
+            height: var(--card-row-height, 70px);
             display: flex;
             flex-direction: column;
             position: relative;
@@ -702,9 +861,10 @@ export class AppleHomeView extends HTMLElement {
           }
 
           .carousel-grid.cameras .entity-card-wrapper {
-            height: 210px; /* Taller for cameras */
-            width: calc(23% - 1.5px); /* Tighter width for cameras to account for smaller gap */
-            min-width: 160px; /* Minimum width to ensure cameras don't get too small */
+            height: var(--apple-camera-height, 180px); /* Taller for cameras */
+            /* Camera cards are 120% of regular card width on desktop */
+            /* 4 columns: (100cqw - 3 gaps) / 4 * 1.2 */
+            flex: 0 0 calc((100cqw - 3 * var(--card-gap, 10px)) / 4 * 1.2);
           }
 
           /* Ensure camera cards are always tall in carousel */
@@ -719,7 +879,7 @@ export class AppleHomeView extends HTMLElement {
 
           /* Default border radius for all apple-home-card elements */
           apple-home-card {
-            border-radius: 16px;
+            border-radius: var(--apple-card-radius, 25px);
             overflow: hidden;
           }
 
@@ -730,26 +890,26 @@ export class AppleHomeView extends HTMLElement {
 
           /* Camera carousel: first card gets left rounded corners */
           .carousel-grid.cameras .entity-card-wrapper:first-child apple-home-card {
-            border-radius: 16px 0 0 16px;
+            border-radius: var(--apple-card-radius, 25px) 0 0 var(--apple-card-radius, 25px);
           }
 
           /* Camera carousel: last card gets right rounded corners */
           .carousel-grid.cameras .entity-card-wrapper:last-child apple-home-card {
-            border-radius: 0 16px 16px 0;
+            border-radius: 0 var(--apple-card-radius, 25px) var(--apple-card-radius, 25px) 0;
           }
 
           /* Camera carousel: single card gets full rounded corners */
           .carousel-grid.cameras .entity-card-wrapper:first-child:last-child apple-home-card {
-            border-radius: 16px;
+            border-radius: var(--apple-card-radius, 25px);
           }
 
           /* RTL Support for camera carousel border-radius */
           .wrapper-content.rtl .carousel-grid.cameras .entity-card-wrapper:first-child apple-home-card {
-            border-radius: 0 16px 16px 0; /* Right rounded corners in RTL */
+            border-radius: 0 var(--apple-card-radius, 25px) var(--apple-card-radius, 25px) 0; /* Right rounded corners in RTL */
           }
 
           .wrapper-content.rtl .carousel-grid.cameras .entity-card-wrapper:last-child apple-home-card {
-            border-radius: 16px 0 0 16px; /* Left rounded corners in RTL */
+            border-radius: var(--apple-card-radius, 25px) 0 0 var(--apple-card-radius, 25px); /* Left rounded corners in RTL */
           }
 
           /* Ensure edit mode works properly with carousels */
@@ -771,7 +931,7 @@ export class AppleHomeView extends HTMLElement {
           .room-group-grid .entity-card-wrapper,
           .scenes-grid .entity-card-wrapper,
           .cameras-grid .entity-card-wrapper {
-            grid-column: span 3;
+            grid-column: span 3; /* Default: 4 columns */
             display: flex;
             flex-direction: column;
             position: relative;
@@ -810,7 +970,7 @@ export class AppleHomeView extends HTMLElement {
           }
           
           .entity-card-wrapper {
-            grid-column: span 3;
+            grid-column: span 3; /* Default: 4 columns */
             display: flex;
             flex-direction: column;
             position: relative;
@@ -858,7 +1018,7 @@ export class AppleHomeView extends HTMLElement {
           .sortable-ghost {
             opacity: 0.2 !important;
             background: rgba(255, 255, 255, 0.05) !important;
-            border-radius: 16px !important;
+            border-radius: var(--apple-card-radius, 25px) !important;
             box-shadow: none !important;
           }
           
@@ -883,7 +1043,7 @@ export class AppleHomeView extends HTMLElement {
             opacity: 1 !important;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
             transform: scale(1.05) rotate(2deg) !important;
-            border-radius: 16px !important;
+            border-radius: var(--apple-card-radius, 25px) !important;
             z-index: 100000 !important;
             pointer-events: none !important;
             transition: none !important;
@@ -929,7 +1089,7 @@ export class AppleHomeView extends HTMLElement {
             opacity: 1 !important;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
             transform: scale(1.05) rotate(2deg) !important;
-            border-radius: 20px !important;
+            border-radius: var(--apple-chip-radius, 50px) !important;
             z-index: 100000 !important;
             pointer-events: none !important;
             transition: none !important;
@@ -941,7 +1101,7 @@ export class AppleHomeView extends HTMLElement {
             align-items: center !important;
             gap: 8px !important;
             padding: 4px 20px 4px 10px !important;
-            border-radius: 20px !important;
+            border-radius: var(--apple-chip-radius, 50px) !important;
             background: rgba(255, 255, 255, 0.25) !important;
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
@@ -1013,68 +1173,165 @@ export class AppleHomeView extends HTMLElement {
           }
           
           /* ============================================
-             TABLET BREAKPOINT (768px - 1199px)
-             3 columns layout
+             EXTRA LARGE CONTAINER (1356px+ container = 1400px+ viewport)
+             6 columns layout - like Apple Home on large screens
+             Uses container query - responds to available space!
              ============================================ */
-          @media (max-width: 1199px) {
-            :host {
-              --card-gap: 10px;
-              --card-row-height: 76px;
-            }
-            
-            .entity-card-wrapper {
-              grid-column: span 4;
-            }
-
-            /* Grid pages responsive for tablet */
+          @container apple-home-view (min-width: 1356px) {
+            .entity-card-wrapper,
             .room-group-grid .entity-card-wrapper,
             .scenes-grid .entity-card-wrapper,
             .cameras-grid .entity-card-wrapper {
-              grid-column: span 4;
+              grid-column: span var(--apple-card-span-xl, 2); /* 6 columns */
+            }
+
+            /* Carousel adjustments for XL */
+            .carousel-grid .entity-card-wrapper {
+              width: calc(16.666% - 8px); /* 6 columns */
+            }
+
+            /* Scene carousel - 90% of 6-column card width */
+            .carousel-grid.scenes .entity-card-wrapper {
+              /* 6 columns: (100cqw - 5 gaps) / 6 * 0.9 */
+              flex: 0 0 calc((100cqw - 5 * var(--card-gap, 10px)) / 6 * 0.9);
+            }
+
+            /* Camera carousel - 120% of 6-column card width */
+            .carousel-grid.cameras .entity-card-wrapper {
+              height: var(--apple-camera-height, 180px);
+              /* 6 columns: (100cqw - 5 gaps) / 6 * 1.2 */
+              flex: 0 0 calc((100cqw - 5 * var(--card-gap, 10px)) / 6 * 1.2);
+            }
+          }
+
+          /* ============================================
+             LARGE CONTAINER (1056-1355px container = 1100-1399px viewport)
+             4 columns layout
+             ============================================ */
+          @container apple-home-view (min-width: 1056px) and (max-width: 1355px) {
+            .entity-card-wrapper,
+            .room-group-grid .entity-card-wrapper,
+            .scenes-grid .entity-card-wrapper,
+            .cameras-grid .entity-card-wrapper {
+              grid-column: span var(--apple-card-span-desktop, 3); /* 4 columns */
+            }
+
+            /* Carousel adjustments */
+            .carousel-grid .entity-card-wrapper {
+              width: calc(25% - 8px); /* 4 columns */
+            }
+
+            /* Scene carousel - 90% of 4-column card width */
+            .carousel-grid.scenes .entity-card-wrapper {
+              /* 4 columns: (100cqw - 3 gaps) / 4 * 0.9 */
+              flex: 0 0 calc((100cqw - 3 * var(--card-gap, 10px)) / 4 * 0.9);
+            }
+
+            /* Camera carousel - 120% of 4-column card width */
+            .carousel-grid.cameras .entity-card-wrapper {
+              height: var(--apple-camera-height, 180px);
+              /* 4 columns: (100cqw - 3 gaps) / 4 * 1.2 */
+              flex: 0 0 calc((100cqw - 3 * var(--card-gap, 10px)) / 4 * 1.2);
+            }
+          }
+
+          /* ============================================
+             MEDIUM CONTAINER (756-1055px container = 800-1099px viewport)
+             4 columns layout - good for tablet landscape
+             ============================================ */
+          @container apple-home-view (min-width: 756px) and (max-width: 1055px) {
+            .wrapper-content {
+              --card-gap: 10px;
+              --card-row-height: var(--apple-card-height-tablet, 66px);
+            }
+            
+            .entity-card-wrapper,
+            .room-group-grid .entity-card-wrapper,
+            .scenes-grid .entity-card-wrapper,
+            .cameras-grid .entity-card-wrapper {
+              grid-column: span var(--apple-card-span-desktop, 3); /* 4 columns */
+            }
+
+            /* Carousel adjustments for medium */
+            .carousel-grid .entity-card-wrapper {
+              width: calc(25% - 8px); /* 4 columns */
+            }
+
+            /* Scene carousel - 90% of 4-column card width */
+            .carousel-grid.scenes .entity-card-wrapper {
+              /* 4 columns: (100cqw - 3 gaps) / 4 * 0.9 */
+              flex: 0 0 calc((100cqw - 3 * var(--card-gap, 10px)) / 4 * 0.9);
+            }
+
+            /* Camera carousel - 120% of 4-column card width */
+            .carousel-grid.cameras .entity-card-wrapper {
+              height: var(--apple-camera-height-tablet, 160px);
+              /* 4 columns: (100cqw - 3 gaps) / 4 * 1.2 */
+              flex: 0 0 calc((100cqw - 3 * var(--card-gap, 10px)) / 4 * 1.2);
+            }
+          }
+
+          /* ============================================
+             TABLET CONTAINER (556-755px container = 600-799px viewport)
+             3 columns layout
+             ============================================ */
+          @container apple-home-view (min-width: 556px) and (max-width: 755px) {
+            .wrapper-content {
+              --card-gap: 10px;
+              --card-row-height: var(--apple-card-height-tablet, 66px);
+            }
+            
+            .entity-card-wrapper,
+            .room-group-grid .entity-card-wrapper,
+            .scenes-grid .entity-card-wrapper,
+            .cameras-grid .entity-card-wrapper {
+              grid-column: span var(--apple-card-span-tablet, 4); /* 3 columns */
             }
 
             /* Carousel adjustments for tablet */
             .carousel-grid .entity-card-wrapper {
-              width: calc(31.333% - 8px); /* Match tablet grid sizing (span 4 of 12) */
+              width: calc(33.333% - 8px); /* 3 columns */
             }
 
+            /* Scene carousel - 90% of 3-column card width */
+            .carousel-grid.scenes .entity-card-wrapper {
+              /* 3 columns: (100cqw - 2 gaps) / 3 * 0.9 */
+              flex: 0 0 calc((100cqw - 2 * var(--card-gap, 10px)) / 3 * 0.9);
+            }
+
+            /* Camera carousel - 120% of 3-column card width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: 190px;
-              width: calc(31.333% - 0.67px); /* Tighter width for cameras with 2px gap */
+              height: var(--apple-camera-height-tablet, 160px);
+              /* 3 columns: (100cqw - 2 gaps) / 3 * 1.2 */
+              flex: 0 0 calc((100cqw - 2 * var(--card-gap, 10px)) / 3 * 1.2);
             }
           }
           
           /* ============================================
-             MOBILE BREAKPOINT (480px - 767px)
+             MOBILE CONTAINER (356-555px container = 400-599px viewport)
              2 columns layout
              ============================================ */
-          @media (max-width: 767px) {
-            :host {
-              padding: 0 16px;
+          @container apple-home-view (min-width: 356px) and (max-width: 555px) {
+            .wrapper-content {
               --card-gap: 10px;
-              --card-row-height: 72px;
-              --section-margin: 24px;
-              --page-padding: 16px;
+              --card-row-height: var(--apple-card-height-mobile, 64px);
+              --section-margin: 18px;
             }
             
             .apple-page-title {
-              font-size: clamp(24px, 7vw, 28px);
-              margin-bottom: 10px;
+              font-size: clamp(22px, 6vw, 26px);
+              margin-bottom: 8px;
             }
             
-            .entity-card-wrapper {
-              grid-column: span 6;
+            .entity-card-wrapper,
+            .room-group-grid .entity-card-wrapper,
+            .scenes-grid .entity-card-wrapper,
+            .cameras-grid .entity-card-wrapper {
+              grid-column: span var(--apple-card-span-mobile, 6); /* 2 columns */
             }
             
             .entity-card-wrapper.tall {
               grid-row: span 2;
-            }
-
-            /* Grid pages responsive for mobile */
-            .room-group-grid .entity-card-wrapper,
-            .scenes-grid .entity-card-wrapper,
-            .cameras-grid .entity-card-wrapper {
-              grid-column: span 6;
             }
 
             /* Cameras still tall on mobile */
@@ -1084,13 +1341,20 @@ export class AppleHomeView extends HTMLElement {
 
             /* Carousel adjustments for mobile */
             .carousel-grid .entity-card-wrapper {
-              width: calc(46% - 6px); /* Match mobile grid sizing (span 6 of 12) */
+              width: calc(46% - 6px); /* 2 columns */
             }
 
+            /* Scene carousel - 90% of 2-column card width */
+            .carousel-grid.scenes .entity-card-wrapper {
+              /* 2 columns: (100cqw - 1 gap) / 2 * 0.9 */
+              flex: 0 0 calc((100cqw - var(--card-gap, 10px)) / 2 * 0.9);
+            }
+
+            /* Camera carousel - 110% of 2-column card width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: 170px;
-              width: calc(46% - 1px); /* Tighter width for cameras with 2px gap */
-              min-width: 140px;
+              height: var(--apple-camera-height-mobile, 150px);
+              /* 2 columns: (100cqw - 1 gap) / 2 * 1.1 */
+              flex: 0 0 calc((100cqw - var(--card-gap, 10px)) / 2 * 1.1);
             }
             
             /* Touch-friendly controls for mobile */
@@ -1107,65 +1371,13 @@ export class AppleHomeView extends HTMLElement {
           }
 
           /* ============================================
-             SMALL MOBILE BREAKPOINT (360px - 479px)
+             SMALL CONTAINER (316-355px container = 360-399px viewport)
              2 columns but smaller cards
              ============================================ */
-          @media (max-width: 479px) {
-            :host {
-              padding: 0 12px;
+          @container apple-home-view (min-width: 316px) and (max-width: 355px) {
+            .wrapper-content {
               --card-gap: 8px;
-              --card-row-height: 68px;
-              --section-margin: 20px;
-            }
-            
-            .apple-page-title {
-              font-size: 24px;
-            }
-            
-            .area-title,
-            .apple-home-section-title,
-            .room-group-title {
-              font-size: 17px;
-              margin-top: 20px;
-            }
-
-            /* Cameras go full width on small mobile */
-            .cameras-grid .entity-card-wrapper {
-              grid-column: span 12;
-              grid-row: span 2;
-            }
-
-            /* Camera carousel adjustments - show 1.5 cameras */
-            .carousel-grid.cameras .entity-card-wrapper {
-              height: 160px;
-              width: calc(65% - 1px);
-              min-width: 180px;
-            }
-            
-            /* Single camera takes more space */
-            .carousel-grid.cameras .entity-card-wrapper:first-child:last-child {
-              width: 100%;
-              max-width: 100%;
-            }
-            
-            /* Two cameras show side by side but larger */
-            .carousel-grid.cameras .entity-card-wrapper:first-child:nth-last-child(2),
-            .carousel-grid.cameras .entity-card-wrapper:last-child:nth-child(2) {
-              width: calc(50% - 1px);
-              min-width: 140px;
-            }
-          }
-
-          /* ============================================
-             EXTRA SMALL / ACCESSIBILITY BREAKPOINT (< 360px)
-             Single column layout - like Apple Home
-             Also triggered by large text/zoom accessibility
-             ============================================ */
-          @media (max-width: 359px) {
-            :host {
-              padding: 0 10px;
-              --card-gap: 8px;
-              --card-row-height: 64px;
+              --card-row-height: var(--apple-card-height-small, 60px);
               --section-margin: 16px;
             }
             
@@ -1173,14 +1385,120 @@ export class AppleHomeView extends HTMLElement {
               font-size: 22px;
             }
             
+            .area-title,
+            .apple-home-section-title,
+            .room-group-title {
+              font-size: 16px;
+              margin-top: 16px;
+            }
+            
+            .entity-card-wrapper,
+            .room-group-grid .entity-card-wrapper,
+            .scenes-grid .entity-card-wrapper {
+              grid-column: span var(--apple-card-span-mobile, 6); /* 2 columns */
+            }
+
+            /* Cameras go full width on small container */
+            .cameras-grid .entity-card-wrapper {
+              grid-column: span 12;
+              grid-row: span 2;
+            }
+
+            /* Scene carousel - 90% of 2-column card width */
+            .carousel-grid.scenes .entity-card-wrapper {
+              /* 2 columns: (100cqw - 1 gap) / 2 * 0.9 */
+              flex: 0 0 calc((100cqw - var(--card-gap, 8px)) / 2 * 0.9);
+            }
+
+            /* Camera carousel - 110% of 2-column card width */
+            .carousel-grid.cameras .entity-card-wrapper {
+              height: var(--apple-camera-height-small, 140px);
+              /* 2 columns: (100cqw - 1 gap) / 2 * 1.1 */
+              flex: 0 0 calc((100cqw - var(--card-gap, 8px)) / 2 * 1.1);
+            }
+          }
+
+          /* ============================================
+             EXTRA SMALL CONTAINER (< 316px container = < 360px viewport)
+             Single column layout - like Apple Home
+             Also triggered by very narrow containers
+             ============================================ */
+          @container apple-home-view (max-width: 315px) {
+            .wrapper-content {
+              --card-gap: 8px;
+              --card-row-height: var(--apple-card-height-xs, 56px);
+              --section-margin: 14px;
+            }
+            
+            .apple-page-title {
+              font-size: 20px;
+            }
+            
+            .area-title,
+            .apple-home-section-title,
+            .room-group-title {
+              font-size: 15px;
+              margin-top: 14px;
+            }
+            
+            .entity-card-wrapper,
+            .room-group-grid .entity-card-wrapper,
+            .scenes-grid .entity-card-wrapper,
+            .cameras-grid .entity-card-wrapper {
+              grid-column: span var(--apple-card-span-xs, 12) !important; /* 1 column */
+            }
+
+            /* Scene carousel - 90% of 1-column card width */
+            .carousel-grid.scenes .entity-card-wrapper {
+              /* 1 column: 100cqw * 0.9 */
+              flex: 0 0 calc(100cqw * 0.9);
+            }
+
+            /* Camera carousel - 100% of 1-column card width */
+            .carousel-grid.cameras .entity-card-wrapper {
+              height: var(--apple-camera-height-small, 140px);
+              /* 1 column: 100cqw * 1.0 */
+              flex: 0 0 100cqw;
+            }
+
+            /* Carousel: single item visible */
+            .carousel-grid .entity-card-wrapper {
+              max-width: 100%;
+            }
+          }
+          
+          /* ============================================
+             FALLBACK: Media queries for older browsers
+             or when container queries don't apply
+             Uses viewport width (not container) - slightly different thresholds
+             ============================================ */
+          @media (max-width: 359px) {
+            :host {
+              padding: 0 var(--apple-page-padding, 10px) var(--apple-page-padding-bottom, 10px) var(--apple-page-padding, 10px);
+              --card-gap: 8px;
+              --card-row-height: var(--apple-card-height-xs, 56px);
+              --section-margin: 14px;
+            }
+            
+            .apple-page-title {
+              font-size: 20px;
+            }
+            
+            .area-title,
+            .apple-home-section-title,
+            .room-group-title {
+              font-size: 15px;
+              margin-top: 14px;
+            }
+            
             /* Single column for all cards */
             .entity-card-wrapper {
-              grid-column: span 12 !important;
+              grid-column: span var(--apple-card-span-xs, 12) !important;
             }
 
             .room-group-grid .entity-card-wrapper,
             .scenes-grid .entity-card-wrapper {
-              grid-column: span 12 !important;
+              grid-column: span var(--apple-card-span-xs, 12) !important;
             }
             
             /* Tall cards span 2 rows in single column */
@@ -1194,36 +1512,30 @@ export class AppleHomeView extends HTMLElement {
               max-width: 100%;
             }
 
-            /* Camera carousel - full width single camera */
+            /* Camera carousel - consistent look, 100% width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: 180px;
-              width: 100% !important;
-              min-width: auto;
-            }
-            
-            /* All cameras get rounded corners in single column mode */
-            .carousel-grid.cameras .entity-card-wrapper apple-home-card {
-              border-radius: 16px !important;
+              height: var(--apple-camera-height-small, 140px);
             }
           }
           
           /* ============================================
              ACCESSIBILITY: Large Text / Zoom Detection
-             When user has accessibility settings for 
-             larger text, switch to single column
+             Container queries handle responsive layout properly.
+             This fallback only kicks in for extremely narrow viewports
+             on high-DPI devices where container queries might not apply.
              ============================================ */
-          @media (max-width: 400px) and (min-resolution: 2dppx) {
-            /* High DPI small screens - likely accessibility zoom */
+          @media (max-width: 320px) and (min-resolution: 2dppx) {
+            /* Very small high DPI screens - accessibility zoom */
             .room-group-grid .entity-card-wrapper,
             .scenes-grid .entity-card-wrapper {
-              grid-column: span 12;
+              grid-column: span var(--apple-card-span-xs, 12);
             }
           }
           
           /* Very narrow viewport (accessibility zoom or split screen) */
           @media (max-width: 320px) {
             :host {
-              padding: 0 8px;
+              padding: 0 var(--apple-page-padding, 8px) var(--apple-page-padding-bottom, 8px) var(--apple-page-padding, 8px);
               --card-row-height: 60px;
             }
             

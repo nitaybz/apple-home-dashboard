@@ -1703,14 +1703,14 @@ export class AppleHeader {
         background: transparent;
         transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-        width: calc(100% + 44px);
-        margin-left: -22px;
+        width: calc(100% + 2 * var(--apple-page-padding, 22px));
+        margin-left: calc(-1 * var(--apple-page-padding, 22px));
         min-height: 44px;
       }
 
       .apple-home-header.rtl {
         margin-left: 0;
-        margin-right: -22px;
+        margin-right: calc(-1 * var(--apple-page-padding, 22px));
       }
 
       /* Fixed positioning for group pages to prevent jumping */
@@ -1764,7 +1764,7 @@ export class AppleHeader {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 12px 22px;
+        padding: 12px var(--apple-page-padding, 22px);
         position: relative;
       }
 
@@ -2046,7 +2046,7 @@ export class AppleHeader {
         background: rgba(30, 30, 30, 0.75);
         backdrop-filter: blur(50px) saturate(180%);
         -webkit-backdrop-filter: blur(50px) saturate(180%);
-        border-radius: 14px;
+        border-radius: var(--apple-modal-radius, 20px);
         padding: 4px 0;
         opacity: 0;
         visibility: hidden;

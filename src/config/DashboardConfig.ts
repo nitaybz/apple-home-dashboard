@@ -155,17 +155,18 @@ export class DashboardConfig {
   // =====================================================================
 
   // Common inactive styling (same for all devices)
+  // Uses CSS variables from LiquidGlassStyles.ts for centralized control
   private static readonly INACTIVE_STYLE = {
-    backgroundColor: '#38383875',
-    iconColor: 'rgba(142, 142, 147, 0.8)',
-    iconBackgroundColor: '#00000033',
-    textColor: '#ffffff'
+    backgroundColor: 'var(--apple-card-bg-inactive, rgba(56, 56, 56, 0.46))',
+    iconColor: 'var(--apple-icon-inactive, rgba(142, 142, 147, 0.8))',
+    iconBackgroundColor: 'var(--apple-icon-bg-inactive, rgba(0, 0, 0, 0.2))',
+    textColor: 'var(--apple-text-inactive, #ffffff)'
   };
 
   // Common active styling (same base for all devices)
   private static readonly ACTIVE_BASE_STYLE = {
-    backgroundColor: '#ffffff',
-    textColor: '#1d1d1f'
+    backgroundColor: 'var(--apple-card-bg-active, #ffffff)',
+    textColor: 'var(--apple-text-active, #1d1d1f)'
   };
 
   // =====================================================================

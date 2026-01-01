@@ -167,6 +167,11 @@ export class BackgroundManager {
 
   /**
    * Apply background to document body using CSS style element
+   * Uses body::after pseudo-element for iOS Safari compatibility.
+   * iOS Safari doesn't support background-attachment: fixed properly - it uses
+   * the full document height instead of viewport height for background-size: cover,
+   * causing the background to stretch based on content length.
+   * The fix is to use a fixed-positioned ::after pseudo-element with 100vh height.
    */
   private applyBackgroundToBody(config: BackgroundConfig): void {
     // Only apply background if Dashboard is active per DashboardStateManager
@@ -191,17 +196,22 @@ export class BackgroundManager {
     }
     
     // Create new style element for body background
+    // Uses body::after pseudo-element for iOS Safari compatibility
     const styleElement = document.createElement('style');
     styleElement.id = 'apple-home-body-background';
     
     styleElement.textContent = `
-      body {
-        background-image: ${backgroundStyle} !important;
-        background-size: cover !important;
-        background-position: center !important;
-        background-repeat: no-repeat !important;
-        background-attachment: fixed !important;
-        height: unset !important;
+      body::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 100vw;
+        z-index: -1;
+        background: ${backgroundStyle} center center;
+        background-size: cover;
+        background-repeat: no-repeat;
       }
     `;
     

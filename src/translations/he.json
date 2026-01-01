@@ -90,6 +90,8 @@
     "light": "אור",
     "light_sensor": "אור",
     "smoke": "עשן",
+    "gas": "גז",
+    "flood": "הצפה",
     "battery": "סוללה",
     "doors": "דלתות",
     "windows": "חלונות",
@@ -185,6 +187,14 @@
     "not_detected": "לא זוהה"
   },
   "smoke": {
+    "detected": "זוהה",
+    "not_detected": "לא זוהה"
+  },
+  "gas": {
+    "detected": "זוהה",
+    "not_detected": "לא זוהה"
+  },
+  "flood": {
     "detected": "זוהה",
     "not_detected": "לא זוהה"
   },

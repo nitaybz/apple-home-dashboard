@@ -92,6 +92,8 @@
     "light": "Свет",
     "light_sensor": "Свет",
     "smoke": "Дым",
+    "gas": "Газ",
+    "flood": "Затопление",
     "battery": "Батарея",
     "doors": "Двери",
     "windows": "Окна",
@@ -187,6 +189,14 @@
     "not_detected": "Не Обнаружено"
   },
   "smoke": {
+    "detected": "Обнаружено",
+    "not_detected": "Не Обнаружено"
+  },
+  "gas": {
+    "detected": "Обнаружено",
+    "not_detected": "Не Обнаружено"
+  },
+  "flood": {
     "detected": "Обнаружено",
     "not_detected": "Не Обнаружено"
   },

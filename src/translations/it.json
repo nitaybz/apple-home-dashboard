@@ -92,6 +92,8 @@
     "light": "Luce",
     "light_sensor": "Luce",
     "smoke": "Fumo",
+    "gas": "Gas",
+    "flood": "Allagamento",
     "battery": "Batteria",
     "doors": "Porte",
     "windows": "Finestre",
@@ -187,6 +189,14 @@
     "not_detected": "Non Rilevato"
   },
   "smoke": {
+    "detected": "Rilevato",
+    "not_detected": "Non Rilevato"
+  },
+  "gas": {
+    "detected": "Rilevato",
+    "not_detected": "Non Rilevato"
+  },
+  "flood": {
     "detected": "Rilevato",
     "not_detected": "Non Rilevato"
   },

@@ -490,7 +490,7 @@ export class DashboardConfig {
   /**
    * Get entity data with styling and status information
    */
-  static getEntityData(state: EntityState, domain: string, isTall: boolean = false, forceWhiteIcons: boolean = false): EntityData {
+  static getEntityData(state: EntityState, domain: string, isTall: boolean = false, forceWhiteIcons: boolean = false, hass?: any): EntityData {
     
     const entityState = state.state;
     const attributes = state.attributes;
@@ -521,7 +521,7 @@ export class DashboardConfig {
     const isActive = this.isEntityActive(domain, entityState, attributes);
     
     const icon = attributes.icon || this.getFallbackIcon(domain, entityState, attributes, state.entity_id);
-    const stateText = this.getStateText(domain, entityState, attributes);
+    const stateText = this.getStateText(domain, entityState, attributes, hass);
 
     // Apply styling based on domain and state
     let styling: Partial<EntityData>;
@@ -613,7 +613,7 @@ export class DashboardConfig {
   /**
    * Get localized state text for an entity
    */
-  private static getStateText(domain: string, entityState: string, attributes: any): string {
+  private static getStateText(domain: string, entityState: string, attributes: any, hass?: any): string {
     switch (domain) {
       case 'light':
         if (entityState === 'on' && attributes.brightness) {
@@ -640,7 +640,7 @@ export class DashboardConfig {
         }
 
       case 'climate':
-        return this.getClimateStateText(entityState, attributes);
+        return this.getClimateStateText(entityState, attributes, hass);
 
       case 'fan':
         if (entityState === 'on' && attributes.percentage && typeof attributes.percentage === 'number') {
@@ -682,11 +682,12 @@ export class DashboardConfig {
   /**
    * Get climate-specific state text
    */
-  private static getClimateStateText(entityState: string, attributes: any): string {
+  private static getClimateStateText(entityState: string, attributes: any, hass?: any): string {
     const targetTemp = attributes.temperature;
     const targetTempHigh = attributes.target_temp_high;
     const targetTempLow = attributes.target_temp_low;
-    const tempUnit = attributes.unit_of_measurement || '°C';
+    // Get temperature unit from entity attributes, or from Home Assistant config, or fallback to °C
+    const tempUnit = attributes.unit_of_measurement || hass?.config?.unit_system?.temperature || '°C';
 
     switch (entityState) {
       case 'heat':

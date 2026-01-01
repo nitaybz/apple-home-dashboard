@@ -92,6 +92,8 @@
     "light": "Licht",
     "light_sensor": "Licht",
     "smoke": "Rauch",
+    "gas": "Gas",
+    "flood": "Überschwemmung",
     "battery": "Batterie",
     "doors": "Türen",
     "windows": "Fenster",
@@ -187,6 +189,14 @@
     "not_detected": "Nicht Erkannt"
   },
   "smoke": {
+    "detected": "Erkannt",
+    "not_detected": "Nicht Erkannt"
+  },
+  "gas": {
+    "detected": "Erkannt",
+    "not_detected": "Nicht Erkannt"
+  },
+  "flood": {
     "detected": "Erkannt",
     "not_detected": "Nicht Erkannt"
   },

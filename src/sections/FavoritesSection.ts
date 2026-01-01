@@ -181,7 +181,7 @@ export class FavoritesSection {
     if (!state) return;
     
     const domain = entity.entity_id.split('.')[0];
-    const entityData = DashboardConfig.getEntityData(state, domain);
+    const entityData = DashboardConfig.getEntityData(state, domain, false, false, cardElement.hass);
     
     if (entityData) {
       const styles = {

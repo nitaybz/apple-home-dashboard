@@ -129,6 +129,8 @@ export class StatusSection {
       { domain: 'occupancy', icon: 'mdi:account-check', label: localize('status_section.occupancy') },
       { domain: 'light_sensor', icon: 'mdi:brightness-6', label: localize('status_section.light') },
       { domain: 'smoke', icon: 'mdi:smoke-detector', label: localize('status_section.smoke') },
+      { domain: 'gas', icon: 'mdi:gas-cylinder', label: localize('status_section.gas') },
+      { domain: 'flood', icon: 'mdi:water-alert', label: localize('status_section.flood') },
       { domain: 'battery', icon: 'mdi:battery-low', label: localize('status_section.battery') },
       { domain: 'doors', icon: 'mdi:door', label: localize('status_section.doors') },
       { domain: 'windows', icon: 'mdi:window-open', label: localize('status_section.windows') },
@@ -256,6 +258,16 @@ export class StatusSection {
       statusMap.get('smoke')?.entityIds.push(entityId);
     }
     
+    // Gas sensors
+    else if (domain === 'binary_sensor' && deviceClass === 'gas') {
+      statusMap.get('gas')?.entityIds.push(entityId);
+    }
+    
+    // Flood/moisture sensors
+    else if (domain === 'binary_sensor' && (deviceClass === 'moisture' || deviceClass === 'water_leak')) {
+      statusMap.get('flood')?.entityIds.push(entityId);
+    }
+    
     // Battery sensors (only low battery ones)
     else if (domain === 'sensor' && deviceClass === 'battery' && parseFloat(state.state) < 20) {
       statusMap.get('battery')?.entityIds.push(entityId);
@@ -321,6 +333,12 @@ export class StatusSection {
       
       case 'smoke':
         return this.calculateSmokeStatus(entityIds, hass);
+      
+      case 'gas':
+        return this.calculateGasStatus(entityIds, hass);
+      
+      case 'flood':
+        return this.calculateFloodStatus(entityIds, hass);
       
       case 'battery':
         return entityIds.length === 1 ? localize('battery.low_battery') : localize('battery.low_battery_count').replace('{count}', entityIds.length.toString());
@@ -655,6 +673,24 @@ export class StatusSection {
     }).length;
     
     return detectedCount === 0 ? localize('smoke.not_detected') : localize('smoke.detected');
+  }
+
+  private calculateGasStatus(entityIds: string[], hass: any): string {
+    const detectedCount = entityIds.filter(id => {
+      const state = hass.states[id];
+      return state && state.state === 'on';
+    }).length;
+    
+    return detectedCount === 0 ? localize('gas.not_detected') : localize('gas.detected');
+  }
+
+  private calculateFloodStatus(entityIds: string[], hass: any): string {
+    const detectedCount = entityIds.filter(id => {
+      const state = hass.states[id];
+      return state && state.state === 'on';
+    }).length;
+    
+    return detectedCount === 0 ? localize('flood.not_detected') : localize('flood.detected');
   }
 
   private calculateContactStatus(entityIds: string[], hass: any): string {
@@ -1006,6 +1042,13 @@ export class StatusSection {
             break;
           case 'smoke':
             defaultIcon = 'mdi:smoke-detector';
+            break;
+          case 'gas':
+            defaultIcon = 'mdi:gas-cylinder';
+            break;
+          case 'moisture':
+          case 'water_leak':
+            defaultIcon = 'mdi:water-alert';
             break;
           default:
             defaultIcon = 'mdi:checkbox-marked-circle';

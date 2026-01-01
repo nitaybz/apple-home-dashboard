@@ -173,7 +173,7 @@ export class AppleHomeCard extends HTMLElement {
     const isInStatusContext = this.closest('.status-modal-cards') || this.closest('.status-chips-container');
     const forceWhiteIcons = Boolean(isInStatusContext);
     
-    const entityData = DashboardConfig.getEntityData(state, this.domain!, this.isTall, forceWhiteIcons);
+    const entityData = DashboardConfig.getEntityData(state, this.domain!, this.isTall, forceWhiteIcons, this._hass);
     
     if (!this.shadowRoot) {
       this.attachShadow({ mode: 'open' });

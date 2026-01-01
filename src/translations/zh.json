@@ -90,6 +90,8 @@
     "light": "光",
     "light_sensor": "光",
     "smoke": "烟",
+    "gas": "燃气",
+    "flood": "水浸",
     "battery": "电池",
     "doors": "门",
     "windows": "窗",
@@ -185,6 +187,14 @@
     "not_detected": "未检测"
   },
   "smoke": {
+    "detected": "已检测",
+    "not_detected": "未检测"
+  },
+  "gas": {
+    "detected": "已检测",
+    "not_detected": "未检测"
+  },
+  "flood": {
     "detected": "已检测",
     "not_detected": "未检测"
   },

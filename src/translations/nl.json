@@ -90,6 +90,8 @@
     "light": "Licht",
     "light_sensor": "Licht",
     "smoke": "Rook",
+    "gas": "Gas",
+    "flood": "Overstroming",
     "battery": "Batterij",
     "doors": "Deuren",
     "windows": "Ramen",
@@ -185,6 +187,14 @@
     "not_detected": "Niet Gedetecteerd"
   },
   "smoke": {
+    "detected": "Gedetecteerd",
+    "not_detected": "Niet Gedetecteerd"
+  },
+  "gas": {
+    "detected": "Gedetecteerd",
+    "not_detected": "Niet Gedetecteerd"
+  },
+  "flood": {
     "detected": "Gedetecteerd",
     "not_detected": "Niet Gedetecteerd"
   },

@@ -26,24 +26,23 @@ export const designTokensCSS = `
       --apple-action-btn-size: 40px;
       --apple-action-icon-size: 22px;
       
-      /* Card Heights */
+      /* Card Height - responsive, changes via media queries */
       --apple-card-height: 70px;
-      --apple-card-height-tablet: 66px;
-      --apple-card-height-mobile: 64px;
-      --apple-card-height-small: 60px;
-      --apple-card-height-xs: 56px;
       
-      /* Camera Heights */
-      --apple-camera-height: 180px;
-      --apple-camera-height-tablet: 160px;
-      --apple-camera-height-mobile: 150px;
-      --apple-camera-height-small: 140px;
+      /* Card Icon - the circle with icon inside entity cards */
+      --apple-card-icon-size: 40px;
+      --apple-card-icon-font-size: 24px;
+      
+      /* Camera Height - responsive, changes via media queries */
+      --apple-camera-height: 220px;
       
       /* Typography */
       --apple-title-size: 28px;
       --apple-section-title-size: 17px;
       --apple-card-name-size: 15px;
       --apple-card-state-size: 13px;
+      --apple-temp-font-size-regular: 16px;
+      --apple-temp-font-size-tall: 40px;
       
       /* Chip Sizes */
       --apple-chip-height: 32px;
@@ -107,25 +106,40 @@ export const designTokensCSS = `
        ============================================ */
     @media (max-width: 767px) {
       :root {
+        /* Card & Camera Heights - Mobile */
+        --apple-card-height: 70px;
+        --apple-camera-height: 200px;
+        
+        /* Card Icon - Mobile */
+        --apple-card-icon-size: 42px;
+        --apple-card-icon-font-size: 28px;
+        
         /* Typography - Mobile */
         --apple-title-size: 32px;
         --apple-section-title-size: 20px;
         --apple-card-name-size: 16px;
         --apple-card-state-size: 14px;
+        --apple-temp-font-size-regular: 16px;
+        --apple-temp-font-size-tall: 40px;
         
         /* Action Buttons - Mobile */
         --apple-action-btn-size: 40px;
         --apple-action-icon-size: 22px;
         
         /* Chips - Mobile */
-        --apple-chip-height: 32px;
-        --apple-chip-icon-size: 22px;
-        --apple-chip-name-size: 12px;
-        --apple-chip-status-size: 10px;
+        --apple-chip-height: 36px;
+        --apple-chip-icon-size: 24px;
+        --apple-chip-name-size: 13px;
+        --apple-chip-status-size: 12px;
         
         /* Page Padding - Mobile */
         --apple-page-padding: 16px;
         --apple-page-padding-bottom: 16px;
+
+        /* Spacing */
+        --apple-section-gap: 20px;
+        --apple-card-gap: 10px;
+        --apple-card-padding: 8px;
       }
     }
     
@@ -138,32 +152,12 @@ export const designTokensCSS = `
         /* Page Padding - Small Mobile */
         --apple-page-padding: 12px;
         --apple-page-padding-bottom: 12px;
+        
+        /* Typography - Small Mobile */
+        --apple-temp-font-size-regular: 16px;
+        --apple-temp-font-size-tall: 40px;
       }
     }
-    
-    /* ============================================
-       Extra Small Overrides (< 400px viewport)
-       Even smaller for very compact screens
-       ============================================  */
-    /* @media (max-width: 399px) {
-      :root {
-        /* Typography - Extra Small */
-        --apple-title-size: 22px;
-        --apple-section-title-size: 14px;
-        --apple-card-name-size: 13px;
-        --apple-card-state-size: 11px;
-        
-        /* Action Buttons - Extra Small */
-        --apple-action-btn-size: 34px;
-        --apple-action-icon-size: 18px;
-        
-        /* Chips - Extra Small */
-        --apple-chip-height: 28px;
-        --apple-chip-icon-size: 16px;
-        --apple-chip-name-size: 11px;
-        --apple-chip-status-size: 10px;
-      }
-    } */
 `;
 
 /**

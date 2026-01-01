@@ -434,17 +434,32 @@ export class SectionReorderManager {
         opacity: 0 !important;
       }
 
-      /* Sortable.js drag class (actual dragged element) - use specific selector to override global styles */
-      .apple-section-reorder-modal .sortable-drag,
-      .sections-list .sortable-drag {
+      /* Sortable.js chosen class (when item is selected but not yet dragged) */
+      .apple-section-reorder-modal .section-item.sortable-chosen,
+      .sections-list .section-item.sortable-chosen {
+        background: rgba(50, 50, 52, 1) !important;
+      }
+
+      /* Sortable.js drag class (actual dragged element) - use highly specific selector to override global styles from DragAndDropManager */
+      .apple-section-reorder-modal .sections-list .section-item.sortable-drag,
+      .apple-section-reorder-modal .section-item.sortable-drag,
+      .sections-list .section-item.sortable-drag {
         opacity: 1 !important;
         visibility: visible !important;
-        background: rgba(44, 44, 46, 1) !important;
+        display: flex !important;
+        background: rgba(58, 58, 60, 1) !important;
+        transform: scale(1.02) !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+        z-index: 10000 !important;
+        border-radius: 10px !important;
       }
 
       /* Sortable.js fallback class (fallback dragged element) */
+      .apple-section-reorder-modal .section-item.sortable-fallback,
       .sortable-fallback {
         opacity: 1 !important;
+        visibility: visible !important;
+        display: flex !important;
       }
 
       @media (max-width: 480px) {
@@ -614,6 +629,7 @@ export class SectionReorderManager {
       scrollSpeed: 3,
       bubbleScroll: false,
       forceAutoScrollFallback: true,
+      forceFallback: true,
       fallbackOnBody: true,
       swapThreshold: 1,
       animation: 150,
@@ -629,6 +645,7 @@ export class SectionReorderManager {
       preventOnFilter: false,
       ghostClass: 'sortable-ghost',
       dragClass: 'sortable-drag', 
+      chosenClass: 'sortable-chosen',
       fallbackClass: 'sortable-fallback',
       onStart: () => {
         // Prevent text selection during drag

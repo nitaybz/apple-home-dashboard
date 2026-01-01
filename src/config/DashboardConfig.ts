@@ -66,17 +66,17 @@ export class DashboardConfig {
    */
   static readonly GROUP_STYLES: Record<DeviceGroup, GroupStyle> = {
     [DeviceGroup.LIGHTING]: {
-      iconColor: '#ffcc0f', // Yellow for lights
+      iconColor: '#ffcc06', // Yellow for lights
       icon: 'mdi:lightbulb',
       name: () => localize('groups.lights')
     },
     [DeviceGroup.CLIMATE]: {
-      iconColor: '#11b5ec', // Blue for climate/fans/covers
+      iconColor: '#00c0e8', // Blue for climate/fans/covers
       icon: 'mdi:fan',
       name: () => localize('groups.climate')
     },
     [DeviceGroup.SECURITY]: {
-      iconColor: '#39d4cf', // Teal for security devices
+      iconColor: '#00cbbf', // Teal for security devices
       icon: 'mdi:lock',
       name: () => localize('groups.security')
     },

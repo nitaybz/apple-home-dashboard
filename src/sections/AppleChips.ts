@@ -449,8 +449,8 @@ export class AppleChips {
         .chips-carousel-container {
           overflow-x: auto;
           overflow-y: hidden;
-          margin-inline-start: calc(-1 * var(--page-padding, 22px));
-          margin-inline-end: calc(-1 * var(--page-padding, 22px));
+          margin-inline-start: calc(-1 * var(--apple-page-padding, 22px));
+          margin-inline-end: calc(-1 * var(--apple-page-padding, 22px));
           -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
           -ms-overflow-style: none;
@@ -464,8 +464,8 @@ export class AppleChips {
           display: inline-flex;
           gap: 10px;
           align-items: center;
-          padding-inline-start: var(--page-padding, 22px);
-          padding-inline-end: var(--page-padding, 22px);
+          padding-inline-start: var(--apple-page-padding, 22px);
+          padding-inline-end: var(--apple-page-padding, 22px);
           min-width: 100%;
           box-sizing: border-box;
           height: 44px;

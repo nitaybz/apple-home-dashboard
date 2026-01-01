@@ -581,15 +581,6 @@ export class AppleHomeCard extends HTMLElement {
         display: block;
         width: 100%;
         height: 100%;
-        /* CSS custom properties for responsive sizing - using design tokens */
-        --card-icon-size: 38px;
-        --card-icon-font-size: 20px;
-        --card-name-font-size: var(--apple-card-name-size, 15px);
-        --card-state-font-size: var(--apple-card-state-size, 13px);
-        --card-padding: var(--apple-card-padding, 10px);
-        --card-gap: 12px;
-        --temp-font-size-regular: 13px;
-        --temp-font-size-tall: 38px;
       }
       
       /* Reduce motion for accessibility */
@@ -598,48 +589,6 @@ export class AppleHomeCard extends HTMLElement {
           animation-duration: 0.01ms !important;
           animation-iteration-count: 1 !important;
           transition-duration: 0.01ms !important;
-        }
-      }
-      
-      /* Mobile adjustments */
-      @media (max-width: 767px) {
-        :host {
-          --card-icon-size: 36px;
-          --card-icon-font-size: 18px;
-          --card-name-font-size: 14px;
-          --card-state-font-size: 12px;
-          --card-padding: 8px;
-          --card-gap: 10px;
-          --temp-font-size-regular: 12px;
-          --temp-font-size-tall: 32px;
-        }
-      }
-      
-      /* Small mobile adjustments */
-      @media (max-width: 479px) {
-        :host {
-          --card-icon-size: 34px;
-          --card-icon-font-size: 18px;
-          --card-name-font-size: 13px;
-          --card-state-font-size: 11px;
-          --card-padding: 8px;
-          --card-gap: 8px;
-          --temp-font-size-regular: 11px;
-          --temp-font-size-tall: 28px;
-        }
-      }
-      
-      /* Extra small / accessibility */
-      @media (max-width: 359px) {
-        :host {
-          --card-icon-size: 32px;
-          --card-icon-font-size: 16px;
-          --card-name-font-size: 13px;
-          --card-state-font-size: 11px;
-          --card-padding: 8px;
-          --card-gap: 8px;
-          --temp-font-size-regular: 11px;
-          --temp-font-size-tall: 26px;
         }
       }
       
@@ -655,7 +604,7 @@ export class AppleHomeCard extends HTMLElement {
       
       .apple-home-card {
         background: ${entityData.backgroundColor};
-        padding: var(--card-padding);
+        padding: var(--apple-card-padding, 10px);
         display: flex;
         flex-direction: column;
         cursor: pointer;
@@ -708,7 +657,7 @@ export class AppleHomeCard extends HTMLElement {
         flex-direction: row;
         align-items: center;
         justify-content: flex-start;
-        gap: var(--card-gap);
+        gap: var(--apple-card-gap, 10px);
       }
       
       /* Tall Design - Icon and text stacked vertically */
@@ -716,13 +665,13 @@ export class AppleHomeCard extends HTMLElement {
         flex-direction: column;
         align-items: flex-start;
         justify-content: flex-start;
-        gap: 12px;
+        gap: var(--apple-card-gap, 10px);
       }
       
       .info-icon {
-        width: var(--card-icon-size);
-        height: var(--card-icon-size);
-        min-width: var(--card-icon-size);
+        width: var(--apple-card-icon-size, 38px);
+        height: var(--apple-card-icon-size, 38px);
+        min-width: var(--apple-card-icon-size, 38px);
         color: ${entityData.iconColor};
         background: ${entityData.iconBackgroundColor};
         transition: all 0.2s ease;
@@ -739,7 +688,7 @@ export class AppleHomeCard extends HTMLElement {
         display: flex;
         align-items: center;
         justify-content: center;
-        --mdc-icon-size: var(--card-icon-font-size);
+        --mdc-icon-size: var(--apple-card-icon-font-size, 20px);
       }
       
       /* Scene/Script icon - no circle background */
@@ -755,8 +704,8 @@ export class AppleHomeCard extends HTMLElement {
       
       /* Regular Design - Small temperature display */
       :host(.regular-design) .info-icon .temperature-text {
-        font-size: var(--temp-font-size-regular);
-        font-weight: 500;
+        font-size: var(--apple-temp-font-size-regular, 13px);
+        font-weight: 700;
         color: ${entityData.iconColor};
         font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
         letter-spacing: -0.3px;
@@ -765,8 +714,9 @@ export class AppleHomeCard extends HTMLElement {
       
       /* Tall Design - Large temperature display */
       :host(.tall-design) .info-icon .temperature-text {
-        font-size: var(--temp-font-size-tall);
-        font-weight: 600;
+        margin: 5px 0;
+        font-size: var(--apple-temp-font-size-tall, 38px);
+        font-weight: 700;
         color: ${entityData.iconColor};
         font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
         letter-spacing: -0.5px;
@@ -804,7 +754,7 @@ export class AppleHomeCard extends HTMLElement {
       }
       
       .entity-name {
-        font-size: var(--card-name-font-size);
+        font-size: var(--apple-card-name-size, 15px);
         font-weight: 500;
         color: ${entityData.textColor};
         margin: 0 0 2px 0;
@@ -821,7 +771,7 @@ export class AppleHomeCard extends HTMLElement {
       }
       
       .entity-state {
-        font-size: var(--card-state-font-size);
+        font-size: var(--apple-card-state-size, 13px);
         font-weight: 500;
         color: ${entityData.isActive ? 'rgba(29, 29, 31, 0.6)' : 'rgba(255, 255, 255, 0.6)'};
         margin: 0;
@@ -1012,20 +962,20 @@ export class AppleHomeCard extends HTMLElement {
 
       /* Adjust card layout for cameras */
       :host(.tall-design) .apple-home-card {
-        padding: var(--card-padding);
+        padding: calc(var(--apple-card-padding, 10px) * 1.1);
       }
 
       /* Mobile adjustments for card layout */
       @media (max-width: 768px) { 
         :host(.regular-design) .card-info {
-            gap: var(--card-gap) !important;
+            gap: var(--apple-card-gap, 10px) !important;
         }
       }
       
       /* Extra small screens - single column */
       @media (max-width: 359px) {
         :host(.regular-design) .card-info {
-          gap: 8px !important;
+          gap: var(--apple-card-gap, 10px) !important;
         }
         
         .entity-name {

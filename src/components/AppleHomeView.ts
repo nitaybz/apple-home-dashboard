@@ -704,13 +704,9 @@ export class AppleHomeView extends HTMLElement {
             /* Enable container queries - responds to available space, not screen */
             container-type: inline-size;
             container-name: apple-home-view;
-            /* CSS custom properties for responsive sizing - using design tokens */
+            /* Local variables - only for values that need container-specific overrides */
             --card-gap: var(--apple-card-gap, 10px);
-            --card-row-height: var(--apple-card-height, 70px);
             --section-margin: var(--apple-section-gap, 20px);
-            --title-font-size: var(--apple-title-size, 28px);
-            --section-title-font-size: var(--apple-section-title-size, 17px);
-            --page-padding: var(--apple-page-padding, 22px);
           }
           
           /* Reduce motion for accessibility */
@@ -735,10 +731,10 @@ export class AppleHomeView extends HTMLElement {
           
           /* Page title (big title below header) */
           .apple-page-title {
-            font-size: clamp(22px, 6vw, var(--title-font-size));
-            font-weight: 600;
+            font-size: var(--apple-title-size, 28px);
+            font-weight: 700;
             color: #ffffff;
-            margin: 0 0 10px 0;
+            margin: 10px 0 15px 0;
             letter-spacing: -0.5px;
             line-height: 1.2;
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
@@ -751,7 +747,7 @@ export class AppleHomeView extends HTMLElement {
           }
           .area-title {
             font-weight: 600;
-            font-size: var(--section-title-font-size);
+            font-size: var(--apple-section-title-size, 17px);
             color: #fff;
             margin: 20px 0 6px;
             padding: 0;
@@ -763,7 +759,7 @@ export class AppleHomeView extends HTMLElement {
 
           /* Special section titles (Scenes, Cameras) */
           .apple-home-section-title {
-            font-size: var(--section-title-font-size);
+            font-size: var(--apple-section-title-size, 17px);
             font-weight: 600;
             color: #fff;
             margin: 20px 0 6px;
@@ -802,8 +798,8 @@ export class AppleHomeView extends HTMLElement {
             overflow-x: auto;
             overflow-y: hidden;
             margin-bottom: var(--section-margin);
-            margin-inline-start: calc(-1 * var(--page-padding, 22px));
-            margin-inline-end: calc(-1 * var(--page-padding, 22px));
+            margin-inline-start: calc(-1 * var(--apple-page-padding, 22px));
+            margin-inline-end: calc(-1 * var(--apple-page-padding, 22px));
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none; /* IE/Edge */
@@ -817,8 +813,8 @@ export class AppleHomeView extends HTMLElement {
           .carousel-grid {
             display: inline-flex;
             gap: var(--card-gap);
-            padding-inline-start: var(--page-padding, 22px);
-            padding-inline-end: var(--page-padding, 22px);
+            padding-inline-start: var(--apple-page-padding, 22px);
+            padding-inline-end: var(--apple-page-padding, 22px);
             min-width: 100%;
             box-sizing: border-box;
           }
@@ -832,7 +828,7 @@ export class AppleHomeView extends HTMLElement {
             /* Scene cards are 90% of regular card width and height */
             /* 4 columns: (100cqw - 3 gaps) / 4 * 0.9 */
             flex: 0 0 calc((100cqw - 3 * var(--card-gap, 10px)) / 4 * 0.9);
-            height: calc(var(--card-row-height, 70px) * 0.9);
+            height: calc(var(--apple-card-height, 70px) * 0.9);
           }
 
           /* Camera carousel - Apple-style tight grid */
@@ -846,14 +842,14 @@ export class AppleHomeView extends HTMLElement {
           .carousel-grid.cameras::after {
             content: '';
             flex-shrink: 0;
-            width: var(--page-padding, 22px);
-            min-width: var(--page-padding, 22px);
+            width: var(--apple-page-padding, 22px);
+            min-width: var(--apple-page-padding, 22px);
           }
 
           .carousel-grid .entity-card-wrapper {
             flex: 0 0 auto;
             width: calc(23% - 9px); /* Match regular grid sizing (span 3 of 12) */
-            height: var(--card-row-height, 70px);
+            height: var(--apple-card-height, 70px);
             display: flex;
             flex-direction: column;
             position: relative;
@@ -923,7 +919,7 @@ export class AppleHomeView extends HTMLElement {
           .room-group-grid, .scenes-grid, .cameras-grid {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
-            grid-auto-rows: var(--card-row-height);
+            grid-auto-rows: var(--apple-card-height, 70px);
             gap: var(--card-gap);
             margin-bottom: var(--section-margin);
           }
@@ -944,7 +940,7 @@ export class AppleHomeView extends HTMLElement {
 
           /* Room group section titles */
           .room-group-title {
-            font-size: clamp(17px, 4.5vw, 20px);
+            font-size: var(--apple-section-title-size, 17px);
             font-weight: 600;
             color: #fff;
             margin: 30px 0 16px;
@@ -964,7 +960,7 @@ export class AppleHomeView extends HTMLElement {
           .area-entities {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
-            grid-auto-rows: var(--card-row-height);
+            grid-auto-rows: var(--apple-card-height, 70px);
             gap: var(--card-gap);
             margin-bottom: 24px;
           }
@@ -1242,7 +1238,6 @@ export class AppleHomeView extends HTMLElement {
           @container apple-home-view (min-width: 756px) and (max-width: 1055px) {
             .wrapper-content {
               --card-gap: 10px;
-              --card-row-height: var(--apple-card-height-tablet, 66px);
             }
             
             .entity-card-wrapper,
@@ -1265,7 +1260,7 @@ export class AppleHomeView extends HTMLElement {
 
             /* Camera carousel - 120% of 4-column card width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: var(--apple-camera-height-tablet, 160px);
+              height: var(--apple-camera-height, 220px);
               /* 4 columns: (100cqw - 3 gaps) / 4 * 1.2 */
               flex: 0 0 calc((100cqw - 3 * var(--card-gap, 10px)) / 4 * 1.2);
             }
@@ -1278,7 +1273,6 @@ export class AppleHomeView extends HTMLElement {
           @container apple-home-view (min-width: 556px) and (max-width: 755px) {
             .wrapper-content {
               --card-gap: 10px;
-              --card-row-height: var(--apple-card-height-tablet, 66px);
             }
             
             .entity-card-wrapper,
@@ -1301,7 +1295,7 @@ export class AppleHomeView extends HTMLElement {
 
             /* Camera carousel - 120% of 3-column card width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: var(--apple-camera-height-tablet, 160px);
+              height: var(--apple-camera-height, 220px);
               /* 3 columns: (100cqw - 2 gaps) / 3 * 1.2 */
               flex: 0 0 calc((100cqw - 2 * var(--card-gap, 10px)) / 3 * 1.2);
             }
@@ -1314,13 +1308,13 @@ export class AppleHomeView extends HTMLElement {
           @container apple-home-view (min-width: 356px) and (max-width: 555px) {
             .wrapper-content {
               --card-gap: 10px;
-              --card-row-height: var(--apple-card-height-mobile, 64px);
               --section-margin: 18px;
             }
             
             .apple-page-title {
-              font-size: clamp(22px, 6vw, 26px);
-              margin-bottom: 8px;
+              font-size: var(--apple-title-size, 28px);
+              margin-bottom: 10px;
+              margin-bottom: 20px;
             }
             
             .entity-card-wrapper,
@@ -1352,7 +1346,7 @@ export class AppleHomeView extends HTMLElement {
 
             /* Camera carousel - 110% of 2-column card width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: var(--apple-camera-height-mobile, 150px);
+              height: var(--apple-camera-height, 220px);
               /* 2 columns: (100cqw - 1 gap) / 2 * 1.1 */
               flex: 0 0 calc((100cqw - var(--card-gap, 10px)) / 2 * 1.1);
             }
@@ -1377,7 +1371,6 @@ export class AppleHomeView extends HTMLElement {
           @container apple-home-view (min-width: 316px) and (max-width: 355px) {
             .wrapper-content {
               --card-gap: 8px;
-              --card-row-height: var(--apple-card-height-small, 60px);
               --section-margin: 16px;
             }
             
@@ -1412,7 +1405,7 @@ export class AppleHomeView extends HTMLElement {
 
             /* Camera carousel - 110% of 2-column card width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: var(--apple-camera-height-small, 140px);
+              height: var(--apple-camera-height, 220px);
               /* 2 columns: (100cqw - 1 gap) / 2 * 1.1 */
               flex: 0 0 calc((100cqw - var(--card-gap, 8px)) / 2 * 1.1);
             }
@@ -1426,7 +1419,6 @@ export class AppleHomeView extends HTMLElement {
           @container apple-home-view (max-width: 315px) {
             .wrapper-content {
               --card-gap: 8px;
-              --card-row-height: var(--apple-card-height-xs, 56px);
               --section-margin: 14px;
             }
             
@@ -1456,7 +1448,7 @@ export class AppleHomeView extends HTMLElement {
 
             /* Camera carousel - 100% of 1-column card width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: var(--apple-camera-height-small, 140px);
+              height: var(--apple-camera-height, 220px);
               /* 1 column: 100cqw * 1.0 */
               flex: 0 0 100cqw;
             }
@@ -1476,7 +1468,6 @@ export class AppleHomeView extends HTMLElement {
             :host {
               padding: 0 var(--apple-page-padding, 10px) var(--apple-page-padding-bottom, 10px) var(--apple-page-padding, 10px);
               --card-gap: 8px;
-              --card-row-height: var(--apple-card-height-xs, 56px);
               --section-margin: 14px;
             }
             
@@ -1514,7 +1505,7 @@ export class AppleHomeView extends HTMLElement {
 
             /* Camera carousel - consistent look, 100% width */
             .carousel-grid.cameras .entity-card-wrapper {
-              height: var(--apple-camera-height-small, 140px);
+              height: var(--apple-camera-height, 220px);
             }
           }
           
@@ -1536,7 +1527,6 @@ export class AppleHomeView extends HTMLElement {
           @media (max-width: 320px) {
             :host {
               padding: 0 var(--apple-page-padding, 8px) var(--apple-page-padding-bottom, 8px) var(--apple-page-padding, 8px);
-              --card-row-height: 60px;
             }
             
             .apple-page-title {

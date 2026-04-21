@@ -27,7 +27,7 @@ injectLiquidGlassStyles();
 declare global {
   interface Window {
     customCards?: any[];
-    customStrategies?: { [key: string]: any };
+    customStrategies?: any[];
     appleHomeCleanupRegistered?: boolean;
   }
 }
@@ -250,8 +250,14 @@ if (window.customCards) {
   });
 }
 
-// Also register the function for backward compatibility
-window.customStrategies = window.customStrategies || {};
-window.customStrategies['apple-home-strategy'] = generateLovelaceDashboard;
+// Register the strategy with Home Assistant
+window.customStrategies = window.customStrategies || [];
+window.customStrategies.push({
+  type: 'apple-home-strategy',
+  strategyType: 'dashboard',
+  name: 'Apple Home Dashboard',
+  description: 'Apple Home-style dashboard auto-generated from your Home Assistant entities.',
+  documentationURL: 'https://github.com/nitaybz/apple-home-dashboard',
+});
 
 

@@ -1040,10 +1040,14 @@ export class EnergySection {
   private findCurrentPower(hass: any, energyEntityIds: string[]): number | null {
     let totalPower = 0;
     let found = false;
+    const seenDevices = new Set<string>();
 
     for (const energyEntityId of energyEntityIds) {
       const entityRegistry = hass.entities?.[energyEntityId];
       if (!entityRegistry?.device_id) continue;
+      // Multiple energy entities (e.g. day/night tariffs) can share one physical
+      // meter device; only count that device's power sensor once.
+      if (seenDevices.has(entityRegistry.device_id)) continue;
 
       for (const [eid, reg] of Object.entries(hass.entities || {})) {
         const r = reg as any;
@@ -1059,6 +1063,7 @@ export class EnergySection {
         if (!isNaN(val)) {
           totalPower += val;
           found = true;
+          seenDevices.add(entityRegistry.device_id);
           break;
         }
       }
@@ -1106,10 +1111,14 @@ export class EnergySection {
     if (EnergySection.cachedGridEntityIds && EnergySection.cachedGridEntityIds.length > 0 && hass.entities) {
       let total = 0;
       let found = false;
+      const seenDevices = new Set<string>();
 
       for (const energyEntityId of EnergySection.cachedGridEntityIds) {
         const entityRegistry = hass.entities[energyEntityId] as any;
         if (!entityRegistry?.device_id) continue;
+        // Multiple grid flow entities (e.g. day/night tariffs) can share one
+        // physical meter device; only count that device's power sensor once.
+        if (seenDevices.has(entityRegistry.device_id)) continue;
 
         for (const [eid, reg] of Object.entries(hass.entities || {})) {
           const r = reg as any;
@@ -1123,7 +1132,8 @@ export class EnergySection {
           if (!isNaN(val)) {
             total += val;
             found = true;
-            break; // take first power sensor per grid entity
+            seenDevices.add(entityRegistry.device_id);
+            break; // take first power sensor per grid device
           }
         }
       }

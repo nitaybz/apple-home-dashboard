@@ -218,6 +218,7 @@
     "today": "Aujourd'hui",
     "solar": "Solaire",
     "battery": "Batterie",
+    "gas": "Gaz",
     "grid_return": "Retour Réseau",
     "now": "MAINT.",
     "active": "Actif",
@@ -235,7 +236,8 @@
     "charged": "Chargée",
     "discharged": "Déchargée",
     "returned_to_grid": "Retour Réseau",
-    "self_sufficiency": "Autosuffisance"
+    "self_sufficiency": "Autosuffisance",
+    "gas_consumption": "Consommation de Gaz"
   },
   "errors": {
     "entity_not_found": "Entité non trouvée",
@@ -271,7 +273,11 @@
     "search_weather_entity": "Rechercher des entités météo...",
     "weather_entity_description": "Sélectionnez une entité météo pour afficher une section météo sur l'écran d'accueil",
     "show_energy": "Afficher la Section Énergie",
-    "show_energy_description": "Affiche une carte récapitulative d'énergie sur l'écran d'accueil avec la consommation actuelle et le graphique de consommation quotidien"
+    "show_energy_description": "Affiche une carte récapitulative d'énergie sur l'écran d'accueil avec la consommation actuelle et le graphique de consommation quotidien",
+    "show_cost": "Afficher le Coût",
+    "show_cost_description": "Affiche les montants du coût sur le tableau de bord énergie lorsqu'ils sont disponibles",
+    "show_gas": "Afficher le Gaz",
+    "show_gas_description": "Affiche la consommation de gaz sur l'écran d'accueil et le tableau de bord énergie lorsqu'elle est configurée"
   },
   "status_messages": {
     "unavailable": "Indisponible",

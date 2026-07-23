@@ -673,6 +673,18 @@ export class CustomizationManager {
     return homeData.show_energy || false;
   }
 
+  async getShowCost(): Promise<boolean> {
+    await this.ensureCustomizationsLoaded();
+    const homeData = this.getCustomization('home');
+    return homeData.show_cost !== false;
+  }
+
+  async getShowGas(): Promise<boolean> {
+    await this.ensureCustomizationsLoaded();
+    const homeData = this.getCustomization('home');
+    return homeData.show_gas !== false;
+  }
+
   // Dashboard state tracking methods - delegate to DashboardStateManager
   setDashboardActive(isActive: boolean): void {
     // This method is now just for backward compatibility

@@ -19,6 +19,8 @@ export interface HomeSettingsData {
   hideSidebar?: boolean;
   showSwitches?: boolean;
   showEnergy?: boolean;
+  showCost?: boolean;
+  showGas?: boolean;
 }
 
 export class HomeSettingsManager {
@@ -37,7 +39,9 @@ export class HomeSettingsManager {
     backgroundType: 'preset',
     presetBackground: BackgroundManager.DEFAULT_BACKGROUND,
     showSwitches: false,
-    showEnergy: false
+    showEnergy: false,
+    showCost: true,
+    showGas: true
   };
   private tempSettings: HomeSettingsData = {
     favoriteAccessories: [],
@@ -49,7 +53,9 @@ export class HomeSettingsManager {
     backgroundType: 'preset',
     presetBackground: BackgroundManager.DEFAULT_BACKGROUND,
     showSwitches: false,
-    showEnergy: false
+    showEnergy: false,
+    showCost: true,
+    showGas: true
   };
   private availableEntities: any[] = [];
   private allEntitiesForInclusion: any[] = [];
@@ -89,7 +95,9 @@ export class HomeSettingsManager {
       hideHeader: customizations.ui?.hide_header || false,
       hideSidebar: customizations.ui?.hide_sidebar || false,
       showSwitches: customizations.home?.show_switches || false,
-      showEnergy: customizations.home?.show_energy || false
+      showEnergy: customizations.home?.show_energy || false,
+      showCost: customizations.home?.show_cost !== false,
+      showGas: customizations.home?.show_gas !== false
     };
 
     // Create a copy for temporary editing
@@ -106,9 +114,11 @@ export class HomeSettingsManager {
       hideHeader: this.settings.hideHeader,
       hideSidebar: this.settings.hideSidebar,
       showSwitches: this.settings.showSwitches,
-      showEnergy: this.settings.showEnergy
+      showEnergy: this.settings.showEnergy,
+      showCost: this.settings.showCost,
+      showGas: this.settings.showGas
     };
-    
+
     }
 
   private async loadAvailableEntities() {
@@ -300,6 +310,30 @@ export class HomeSettingsManager {
           </div>
         </div>
         <p class="settings-section-description">${localize('settings.show_energy_description')}</p>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-card switch-card">
+          <div class="switch-setting-row">
+            <span class="option-text">${localize('settings.show_cost')}</span>
+            <div class="ui-setting-toggle" id="cost-toggle">
+              <div class="toggle-switch"></div>
+            </div>
+          </div>
+        </div>
+        <p class="settings-section-description">${localize('settings.show_cost_description')}</p>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-card switch-card">
+          <div class="switch-setting-row">
+            <span class="option-text">${localize('settings.show_gas')}</span>
+            <div class="ui-setting-toggle" id="gas-toggle">
+              <div class="toggle-switch"></div>
+            </div>
+          </div>
+        </div>
+        <p class="settings-section-description">${localize('settings.show_gas_description')}</p>
       </div>
 
       <div class="settings-section" id="included-switches-section" style="display: ${this.tempSettings.showSwitches ? 'none' : 'block'};">
@@ -1276,6 +1310,8 @@ export class HomeSettingsManager {
       JSON.stringify(this.settings.extraAccessories) !== JSON.stringify(this.tempSettings.extraAccessories) ||
       this.settings.showSwitches !== this.tempSettings.showSwitches ||
       this.settings.showEnergy !== this.tempSettings.showEnergy ||
+      this.settings.showCost !== this.tempSettings.showCost ||
+      this.settings.showGas !== this.tempSettings.showGas ||
       this.settings.weatherEntity !== this.tempSettings.weatherEntity;
     
     // Apply temporary settings to actual settings
@@ -1292,6 +1328,8 @@ export class HomeSettingsManager {
     this.settings.hideSidebar = this.tempSettings.hideSidebar;
     this.settings.showSwitches = this.tempSettings.showSwitches;
     this.settings.showEnergy = this.tempSettings.showEnergy;
+    this.settings.showCost = this.tempSettings.showCost;
+    this.settings.showGas = this.tempSettings.showGas;
 
     // Start modal fade immediately (while save happens in parallel)
     if (this.modal) {
@@ -1358,6 +1396,8 @@ export class HomeSettingsManager {
     home.weather_entity = this.settings.weatherEntity;
     home.show_switches = this.settings.showSwitches;
     home.show_energy = this.settings.showEnergy;
+    home.show_cost = this.settings.showCost;
+    home.show_gas = this.settings.showGas;
     
     const ui = this.customizationManager.getCustomization('ui') || {};
     ui.hide_header = this.settings.hideHeader;
@@ -1415,6 +1455,8 @@ export class HomeSettingsManager {
     const sidebarToggle = this.modal.querySelector('#sidebar-toggle');
     const switchesToggle = this.modal.querySelector('#switches-toggle');
     const energyToggle = this.modal.querySelector('#energy-toggle');
+    const costToggle = this.modal.querySelector('#cost-toggle');
+    const gasToggle = this.modal.querySelector('#gas-toggle');
 
     headerToggle?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1447,6 +1489,18 @@ export class HomeSettingsManager {
       e.stopPropagation();
       this.tempSettings.showEnergy = !this.tempSettings.showEnergy;
       this.updateUIToggle('energy-toggle', this.tempSettings.showEnergy || false);
+    });
+
+    costToggle?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.tempSettings.showCost = !this.tempSettings.showCost;
+      this.updateUIToggle('cost-toggle', this.tempSettings.showCost || false);
+    });
+
+    gasToggle?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.tempSettings.showGas = !this.tempSettings.showGas;
+      this.updateUIToggle('gas-toggle', this.tempSettings.showGas || false);
     });
 
     setTimeout(() => {
@@ -1503,6 +1557,8 @@ export class HomeSettingsManager {
     this.updateUIToggle('sidebar-toggle', this.tempSettings.hideSidebar || false);
     this.updateUIToggle('switches-toggle', this.tempSettings.showSwitches || false);
     this.updateUIToggle('energy-toggle', this.tempSettings.showEnergy || false);
+    this.updateUIToggle('cost-toggle', this.tempSettings.showCost !== false);
+    this.updateUIToggle('gas-toggle', this.tempSettings.showGas !== false);
   }
 
   private openPresetsView() {

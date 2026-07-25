@@ -1,3 +1,4 @@
+import { AppleHomeCard } from './AppleHomeCard';
 import { DragAndDropManager } from '../utils/DragAndDropManager';
 import { EditModeManager } from '../utils/EditModeManager';
 import { AppleHeader, HeaderConfig } from '../sections/AppleHeader';
@@ -24,6 +25,13 @@ export class AppleHomeView extends HTMLElement {
   private _hass?: any;
   private _config?: any;
   private content?: HTMLElement;
+  // Targeted event routing: entity_id -> cards that render it.
+  private entityCardIndex: Map<string, Set<AppleHomeCard>> = new Map();
+  // Cards that must receive every hass update regardless of state diff (cameras).
+  private alwaysUpdateCards: Set<AppleHomeCard> = new Set();
+  // Set true whenever this.content's card DOM changes; triggers a lazy index rebuild.
+  private indexDirty: boolean = true;
+  private contentMutationObserver?: MutationObserver;
   private _rendered = false;
   private _isTransitioning = false; // Add transition state
   private _lastRenderTime = 0; // Track when last render happened
@@ -160,7 +168,13 @@ export class AppleHomeView extends HTMLElement {
     if (this.globalRefreshHandler) {
       document.removeEventListener('apple-home-dashboard-refresh', this.globalRefreshHandler);
     }
-    
+
+    // Stop watching content for card DOM changes
+    if (this.contentMutationObserver) {
+      this.contentMutationObserver.disconnect();
+      this.contentMutationObserver = undefined;
+    }
+
     // Clean up registry subscription handlers
     this.cleanupRegistrySubscriptions();
     
@@ -506,9 +520,9 @@ export class AppleHomeView extends HTMLElement {
       this.chipsElement.setActiveGroup(config.activeGroup);
     }
     
-    // Update existing cards with new hass if available
-    this.updateExistingCards(this._hass);
-    
+    // Update existing cards with new hass if available (no diff baseline after a config change)
+    this.updateExistingCards(undefined, this._hass);
+
     // Update chips to reflect any config changes
     this.updateChips();
   }
@@ -671,8 +685,8 @@ export class AppleHomeView extends HTMLElement {
       this.renderPage('setHass-firstTime');
       this._rendered = true;
     } else {
-      // Optimized updates: just update existing components with new hass
-      this.updateExistingCards(this._hass);
+      // Optimized updates: route the new hass only to affected cards
+      this.updateExistingCards(oldHass, this._hass);
       this.updateChips();
     }
   }
@@ -1749,7 +1763,8 @@ export class AppleHomeView extends HTMLElement {
     
     // Always ensure we have the references after HTML structure exists
     this.content = this.shadowRoot!.querySelector('.page-content') as HTMLElement;
-    
+    this.setupContentMutationObserver();
+
     // Only update chips reference if we don't have one or if it's not connected
     if (!this.chipsElement) {
       const chipsContainer = this.content.querySelector('.permanent-chips') as HTMLElement;
@@ -1767,34 +1782,132 @@ export class AppleHomeView extends HTMLElement {
     }
   }
 
-  private updateExistingCards(hass: any) {
-    // Update all existing apple-home-card elements with new hass
-    // Only update if hass actually changed to avoid unnecessary work
-    if (this.content && hass) {
-      const cards = this.content.querySelectorAll('apple-home-card');
-      cards.forEach((card: any) => {
-        if (card && card.hass !== hass) {
-          card.hass = hass;
-        }
+  /**
+   * Rebuild the entity->card index from the currently rendered DOM. Runs at most
+   * once per DOM change (guarded by indexDirty), never on the steady hot path.
+   */
+  private rebuildEntityCardIndex(): void {
+    this.entityCardIndex.clear();
+    this.alwaysUpdateCards.clear();
+    if (!this.content) {
+      this.indexDirty = false;
+      return;
+    }
+    const cards = this.content.querySelectorAll('apple-home-card');
+    cards.forEach((el) => {
+      const card = el as AppleHomeCard;
+      if (card.needsContinuousHass) {
+        this.alwaysUpdateCards.add(card);
+        return;
+      }
+      const id = card.entityId;
+      if (!id) return;
+      let set = this.entityCardIndex.get(id);
+      if (!set) {
+        set = new Set<AppleHomeCard>();
+        this.entityCardIndex.set(id, set);
+      }
+      set.add(card);
+    });
+    this.indexDirty = false;
+  }
+
+  /**
+   * Cheap reference-compare diff of hass.states. HA replaces the state object on
+   * every change, so identity inequality == changed. Also reports removed ids.
+   * O(#entities) pointer comparisons; no JSON, no per-attribute work.
+   */
+  private computeChangedEntityIds(oldHass: any, newHass: any): string[] {
+    const changed: string[] = [];
+    const newStates = newHass?.states;
+    if (!newStates) return changed;
+    const oldStates = oldHass?.states;
+    if (!oldStates) return Object.keys(newStates);
+    for (const id in newStates) {
+      if (oldStates[id] !== newStates[id]) changed.push(id);
+    }
+    for (const id in oldStates) {
+      if (!(id in newStates)) changed.push(id);
+    }
+    return changed;
+  }
+
+  /**
+   * The single page object that is actually rendered for this view instance,
+   * selected by pageType. Only this page needs the new hass; the other four
+   * page objects are never rendered here.
+   */
+  private getActivePage(): any {
+    switch (this.config?.pageType) {
+      case 'group': return this.groupPage;
+      case 'room': return this.roomPage;
+      case 'scenes': return this.scenesPage;
+      case 'cameras': return this.camerasPage;
+      default: return this.homePage;
+    }
+  }
+
+  /**
+   * Watch this.content for card add/remove/move (full re-render, edit-mode drag,
+   * registry surgical updates) and mark the index dirty for a lazy rebuild on the
+   * next push. Observes light DOM only (childList + subtree) — NOT attributes and
+   * NOT across shadow boundaries, so in-place card updates and camera image swaps
+   * (which live in each card's shadowRoot) never trigger a rebuild.
+   */
+  private setupContentMutationObserver(): void {
+    if (!this.content) return;
+    if (this.contentMutationObserver) {
+      this.contentMutationObserver.disconnect();
+    }
+    this.indexDirty = true;
+    this.contentMutationObserver = new MutationObserver(() => {
+      this.indexDirty = true;
+    });
+    this.contentMutationObserver.observe(this.content, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private updateExistingCards(oldHass: any, newHass: any) {
+    if (!this.content || !newHass) return;
+
+    // Rebuild the index only when the card DOM actually changed since last push.
+    if (this.indexDirty) {
+      this.rebuildEntityCardIndex();
+    }
+
+    // Camera (continuous) cards always get the latest hass for snapshot auth.
+    this.alwaysUpdateCards.forEach((card) => {
+      if (card.hass !== newHass) card.hass = newHass;
+    });
+
+    if (!oldHass) {
+      // No baseline to diff against (first update / config change): refresh all
+      // indexed cards once. Still O(cards) but only on this rare path.
+      this.entityCardIndex.forEach((cards) => {
+        cards.forEach((card) => {
+          if (card.hass !== newHass) card.hass = newHass;
+        });
       });
+    } else {
+      // Steady hot path: touch only cards whose entity changed this push.
+      const changedIds = this.computeChangedEntityIds(oldHass, newHass);
+      const updated = new Set<AppleHomeCard>();
+      for (const id of changedIds) {
+        const cards = this.entityCardIndex.get(id);
+        if (!cards) continue;
+        cards.forEach((card) => {
+          if (updated.has(card)) return;
+          updated.add(card);
+          if (card.hass !== newHass) card.hass = newHass;
+        });
+      }
     }
-    
-    // Update page instances with new hass data
-    if (this.homePage) {
-      this.homePage.hass = hass;
-    }
-    if (this.roomPage) {
-      this.roomPage.hass = hass;
-    }
-    if (this.groupPage) {
-      this.groupPage.hass = hass;
-    }
-    if (this.scenesPage) {
-      this.scenesPage.hass = hass;
-    }
-    if (this.camerasPage) {
-      this.camerasPage.hass = hass;
-    }
+
+    // Active-page guard: only the rendered page object needs the new hass.
+    const activePage = this.getActivePage();
+    if (activePage) activePage.hass = newHass;
   }
 
   private handleEditModeChange(editMode: boolean) {

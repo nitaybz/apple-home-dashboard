@@ -172,6 +172,24 @@ export class AppleHomeCard extends HTMLElement {
     return this._hass;
   }
 
+  /**
+   * The single entity_id this card renders. Public accessor over the private
+   * `entity` field so AppleHomeView can index cards by entity without reflection.
+   */
+  get entityId(): string | undefined {
+    return this.entity;
+  }
+
+  /**
+   * True for cards that must receive every hass update regardless of their own
+   * entity's state changing. Camera cards fetch snapshots on a timer using the
+   * latest hass (connection/signed paths), so they cannot be routed only on
+   * state-object changes without going stale.
+   */
+  get needsContinuousHass(): boolean {
+    return this.domain === 'camera';
+  }
+
   private render() {
     if (!this._hass || !this.entity) {
       return;

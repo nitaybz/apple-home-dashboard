@@ -235,9 +235,18 @@ if (!customElements.get('apple-home-view')) {
   customElements.define('apple-home-view', AppleHomeView);
 }
 
-// Register the strategy element with Home Assistant (required pattern)
+// Register the strategy element with Home Assistant.
+// Dashboard strategies are looked up as `ll-strategy-dashboard-<type>`; without
+// that tag Home Assistant fails with "Timeout waiting for strategy element
+// ll-strategy-dashboard-apple-home-strategy" and the dashboard never loads.
+// The unprefixed name is kept for older Home Assistant versions that still
+// resolve the legacy `ll-strategy-<type>` form.
+if (!customElements.get('ll-strategy-dashboard-apple-home-strategy')) {
+  customElements.define('ll-strategy-dashboard-apple-home-strategy', AppleHomeStrategy);
+}
+
 if (!customElements.get('ll-strategy-apple-home-strategy')) {
-  customElements.define('ll-strategy-apple-home-strategy', AppleHomeStrategy);
+  customElements.define('ll-strategy-apple-home-strategy', class extends AppleHomeStrategy {});
 }
 
 // Register the strategy with Home Assistant cards list

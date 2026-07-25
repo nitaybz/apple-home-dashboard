@@ -1,1 +1,8 @@
 * text=auto eol=lf
+
+# dist/ is a generated webpack bundle, rebuilt and committed by CI
+# (.github/workflows/build.yml). Marking it generated keeps the minified
+# output collapsed in pull request diffs instead of burying the actual
+# source changes under ~650KB of noise.
+dist/** linguist-generated=true
+dist/** -diff

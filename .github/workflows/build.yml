@@ -4,55 +4,26 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+
+# Required so the built bundle can be pushed back to main.
+permissions:
+  contents: write
 
 jobs:
-  check-for-changes:
-    name: Check for changes
-    runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.check_files.outputs.any_changed }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Check for changed source files
-        id: check_files
-        uses: tj-actions/changed-files@v47
-        with:
-          files: |
-            src/**
-            webpack.config.ts
-
   build:
     name: Build Distribution
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: check-for-changes
-    if: needs.check-for-changes.outputs.changed == 'true'
-    env:
-      CI_COMMIT_AUTHOR: 'CI Bot'
-      CI_COMMIT_EMAIL: 'ci@noreply.github.com'
-      CI_COMMIT_MESSAGE: |
-        Continuous Integration - Build Distribution
     strategy:
       matrix:
         node-version: [20.x]
 
     steps:
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@v2
-        with:
-          app_id: ${{ secrets.APP_ID }}
-          private_key: ${{ secrets.APP_PRIVATE_KEY }}
-
       - name: Checkout Repository
         uses: actions/checkout@v6
-        with:
-          token: ${{ steps.generate_token.outputs.token }}
-          fetch-depth: 0
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
@@ -66,10 +37,21 @@ jobs:
       - name: Build Distribution
         run: npm run build
 
+      # On pull requests the build result is only a check that the sources
+      # compile; dist/ is rebuilt and committed once the change reaches main.
       - name: Commit Distribution Build
+        if: github.event_name == 'push'
+        env:
+          CI_COMMIT_AUTHOR: 'CI Bot'
+          CI_COMMIT_EMAIL: 'ci@noreply.github.com'
+          CI_COMMIT_MESSAGE: 'Continuous Integration - Build Distribution'
         run: |
-          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-          git config --global user.email "${{ env.CI_COMMIT_EMAIL }}"
-          git remote set-url origin https://x-access-token:${{ steps.generate_token.outputs.token }}@github.com/nitaybz/apple-home-dashboard.git
+          git config user.name "${CI_COMMIT_AUTHOR}"
+          git config user.email "${CI_COMMIT_EMAIL}"
           git add dist
-          git diff --quiet && git diff --staged --quiet || (git commit -m "${{ env.CI_COMMIT_MESSAGE }}" && git push)
+          if git diff --staged --quiet; then
+            echo "Distribution is already up to date."
+          else
+            git commit -m "${CI_COMMIT_MESSAGE}"
+            git push
+          fi

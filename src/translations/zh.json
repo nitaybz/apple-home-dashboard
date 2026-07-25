@@ -218,6 +218,7 @@
     "today": "今日",
     "solar": "太阳能",
     "battery": "电池",
+    "gas": "燃气",
     "grid_return": "回馈电网",
     "now": "现在",
     "active": "活跃",
@@ -235,7 +236,8 @@
     "charged": "充电",
     "discharged": "放电",
     "returned_to_grid": "回馈电网",
-    "self_sufficiency": "自给率"
+    "self_sufficiency": "自给率",
+    "gas_consumption": "燃气消耗"
   },
   "errors": {
     "entity_not_found": "实体未找到",
@@ -271,7 +273,11 @@
     "search_weather_entity": "搜索天气实体...",
     "weather_entity_description": "选择一个天气实体以在主屏幕上显示天气部分",
     "show_energy": "显示能源部分",
-    "show_energy_description": "在主屏幕上显示能源摘要卡，包含当前用电量和每日用电图表"
+    "show_energy_description": "在主屏幕上显示能源摘要卡，包含当前用电量和每日用电图表",
+    "show_cost": "显示费用",
+    "show_cost_description": "在能源仪表板上显示费用数据（如可用）",
+    "show_gas": "显示燃气",
+    "show_gas_description": "在主屏幕和能源仪表板上显示燃气消耗（如已配置）"
   },
   "status_messages": {
     "unavailable": "不可用",

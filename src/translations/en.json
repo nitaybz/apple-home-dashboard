@@ -217,6 +217,7 @@
     "today": "Today",
     "solar": "Solar",
     "battery": "Battery",
+    "gas": "Gas",
     "grid_return": "Grid Return",
     "now": "NOW",
     "active": "Active",
@@ -234,7 +235,8 @@
     "charged": "Charged",
     "discharged": "Discharged",
     "returned_to_grid": "Grid Return",
-    "self_sufficiency": "Self-Sufficiency"
+    "self_sufficiency": "Self-Sufficiency",
+    "gas_consumption": "Gas Consumption"
   },
   "errors": {
     "entity_not_found": "Entity not found",
@@ -270,7 +272,11 @@
     "search_weather_entity": "Search for weather entities...",
     "weather_entity_description": "Select a weather entity to display a weather section on the home screen",
     "show_energy": "Show Energy Section",
-    "show_energy_description": "Show an energy summary card on the home screen with current usage and daily consumption chart"
+    "show_energy_description": "Show an energy summary card on the home screen with current usage and daily consumption chart",
+    "show_cost": "Show Cost",
+    "show_cost_description": "Show cost figures on the energy dashboard when available",
+    "show_gas": "Show Gas",
+    "show_gas_description": "Show gas consumption on the home screen and energy dashboard when configured"
   },
   "status_messages": {
     "unavailable": "Unavailable",

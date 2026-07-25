@@ -220,6 +220,7 @@
     "today": "Heute",
     "solar": "Solar",
     "battery": "Batterie",
+    "gas": "Gas",
     "grid_return": "Netzeinspeisung",
     "now": "JETZT",
     "active": "Aktiv",
@@ -237,7 +238,8 @@
     "charged": "Geladen",
     "discharged": "Entladen",
     "returned_to_grid": "Netzeinspeisung",
-    "self_sufficiency": "Autarkie"
+    "self_sufficiency": "Autarkie",
+    "gas_consumption": "Gasverbrauch"
   },
   "errors": {
     "entity_not_found": "Entität nicht gefunden",
@@ -273,7 +275,11 @@
     "search_weather_entity": "Nach Wetter-Entitäten suchen...",
     "weather_entity_description": "Wählen Sie eine Wetter-Entität aus, um einen Wetterbereich auf dem Startbildschirm anzuzeigen",
     "show_energy": "Energiebereich anzeigen",
-    "show_energy_description": "Zeigt eine Energieübersichtskarte auf dem Startbildschirm mit aktuellem Verbrauch und Tagesverbrauchsdiagramm"
+    "show_energy_description": "Zeigt eine Energieübersichtskarte auf dem Startbildschirm mit aktuellem Verbrauch und Tagesverbrauchsdiagramm",
+    "show_cost": "Kosten anzeigen",
+    "show_cost_description": "Zeigt Kostenangaben im Energie-Dashboard, sofern verfügbar",
+    "show_gas": "Gas anzeigen",
+    "show_gas_description": "Zeigt den Gasverbrauch auf dem Startbildschirm und im Energie-Dashboard, sofern konfiguriert"
   },
   "status_messages": {
     "unavailable": "Nicht verfügbar",

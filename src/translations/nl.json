@@ -218,6 +218,7 @@
     "today": "Vandaag",
     "solar": "Zonne-energie",
     "battery": "Batterij",
+    "gas": "Gas",
     "grid_return": "Teruglevering",
     "now": "NU",
     "active": "Actief",
@@ -235,7 +236,8 @@
     "charged": "Opgeladen",
     "discharged": "Ontladen",
     "returned_to_grid": "Teruglevering",
-    "self_sufficiency": "Zelfvoorzienend"
+    "self_sufficiency": "Zelfvoorzienend",
+    "gas_consumption": "Gasverbruik"
   },
   "errors": {
     "entity_not_found": "Entiteit niet gevonden",
@@ -271,7 +273,11 @@
     "search_weather_entity": "Zoek naar weerentiteiten...",
     "weather_entity_description": "Selecteer een weerentiteit om een weersectie op het startscherm te tonen",
     "show_energy": "Energiesectie Tonen",
-    "show_energy_description": "Toont een energieoverzichtskaart op het startscherm met huidig verbruik en dagelijks verbruiksgrafiek"
+    "show_energy_description": "Toont een energieoverzichtskaart op het startscherm met huidig verbruik en dagelijks verbruiksgrafiek",
+    "show_cost": "Kosten Tonen",
+    "show_cost_description": "Toont kostencijfers op het energiedashboard indien beschikbaar",
+    "show_gas": "Gas Tonen",
+    "show_gas_description": "Toont gasverbruik op het startscherm en energiedashboard indien geconfigureerd"
   },
   "status_messages": {
     "unavailable": "Niet beschikbaar",

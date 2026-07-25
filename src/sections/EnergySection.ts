@@ -7,8 +7,11 @@ interface EnergyPrefs {
     stat_energy_from?: string;
     stat_energy_to?: string;
     stat_compensation?: string;
+    stat_cost?: string;
     entity_energy_from?: string;
     entity_energy_to?: string;
+    entity_energy_price?: string;
+    number_energy_price?: number;
     flow_from?: Array<{ stat_energy_from: string; stat_cost?: string }>;
     flow_to?: Array<{ stat_energy_to: string; stat_compensation?: string }>;
     stat_energy_price?: string;
@@ -30,8 +33,11 @@ interface EnergyData {
   solarToday: number | null;
   batteryPercent: number | null;
   gridReturn: number | null;
+  gasToday: number | null;
+  gasUnit: string;
   hasSolar: boolean;
   hasBattery: boolean;
+  hasGas: boolean;
   gridEntityId: string | null;
 }
 
@@ -48,9 +54,14 @@ interface FullEnergyData {
   batteryDischarged: number | null;
   gridReturn: number | null;
   selfSufficiency: number | null;
+  gasPeriodTotal: number | null;
+  gasCostTotal: number | null;
+  gasPreviousPeriodTotal: number | null;
+  gasUnit: string;
   hasSolar: boolean;
   hasBattery: boolean;
   hasGridReturn: boolean;
+  hasGas: boolean;
   devices: DeviceConsumption[];
   costTotal: number | null;
 }
@@ -145,8 +156,8 @@ export class EnergySection {
       card.appendChild(chartContainer);
     }
 
-    // Solar / Battery row
-    if (energyData.hasSolar || energyData.hasBattery) {
+    // Solar / Battery / Gas row
+    if (energyData.hasSolar || energyData.hasBattery || energyData.hasGas) {
       const extraRow = document.createElement('div');
       extraRow.className = 'energy-extra-row';
 
@@ -168,6 +179,16 @@ export class EnergySection {
           <div class="energy-extra-main"><ha-icon icon="mdi:battery" class="energy-extra-icon battery"></ha-icon><span>${localize('energy.battery')} ${batteryText}</span></div>
         `;
         extraRow.appendChild(batteryEl);
+      }
+
+      if (energyData.hasGas) {
+        const gasEl = document.createElement('div');
+        gasEl.className = 'energy-extra-item';
+        const gasText = energyData.gasToday !== null ? this.formatGas(energyData.gasToday, energyData.gasUnit) : '--';
+        gasEl.innerHTML = `
+          <div class="energy-extra-main"><ha-icon icon="mdi:fire" class="energy-extra-icon gas"></ha-icon><span>${localize('energy.gas')} ${gasText}</span></div>
+        `;
+        extraRow.appendChild(gasEl);
       }
 
       card.appendChild(extraRow);
@@ -272,8 +293,8 @@ export class EnergySection {
       this.renderConsumptionChart(dynamicArea, data.barData, this.selectedPeriod);
     }
 
-    // Flow cards (solar, battery, grid return, self-sufficiency)
-    const hasFlowCards = data.hasSolar || data.hasBattery || data.hasGridReturn;
+    // Flow cards (solar, battery, grid return, gas, self-sufficiency)
+    const hasFlowCards = data.hasSolar || data.hasBattery || data.hasGridReturn || data.hasGas;
     if (hasFlowCards) {
       const flowGrid = document.createElement('div');
       flowGrid.className = 'energy-flow-grid';
@@ -286,6 +307,9 @@ export class EnergySection {
       }
       if (data.hasGridReturn) {
         this.renderGridReturnCard(flowGrid, data);
+      }
+      if (data.hasGas) {
+        this.renderGasCard(flowGrid, data);
       }
       if (data.hasSolar && data.selfSufficiency !== null) {
         this.renderSelfSufficiencyCard(flowGrid, data.selfSufficiency);
@@ -417,6 +441,35 @@ export class EnergySection {
       <div class="flow-card-values">
         <div class="flow-card-primary">${data.gridReturn !== null ? this.formatEnergy(data.gridReturn) : '--'}</div>
       </div>
+    `;
+
+    parent.appendChild(card);
+  }
+
+  private renderGasCard(parent: HTMLElement, data: FullEnergyData): void {
+    const card = document.createElement('div');
+    card.className = 'energy-flow-card';
+
+    const gasTotalText = data.gasPeriodTotal !== null ? this.formatGas(data.gasPeriodTotal, data.gasUnit) : '--';
+
+    let vsPreviousHtml = '';
+    if (data.gasPreviousPeriodTotal !== null && data.gasPeriodTotal !== null && data.gasPreviousPeriodTotal > 0) {
+      const diff = ((data.gasPeriodTotal - data.gasPreviousPeriodTotal) / data.gasPreviousPeriodTotal) * 100;
+      const sign = diff >= 0 ? '+' : '';
+      const color = diff <= 0 ? '#4ADE80' : '#FF6B6B';
+      vsPreviousHtml = `<div class="flow-card-vs-previous" style="color: ${color}">${sign}${diff.toFixed(0)}% ${localize('energy.vs_previous')}</div>`;
+    }
+
+    card.innerHTML = `
+      <div class="flow-card-header">
+        <ha-icon icon="mdi:fire" class="flow-card-icon gas"></ha-icon>
+        <span class="flow-card-title">${localize('energy.gas_consumption')}</span>
+      </div>
+      <div class="flow-card-values">
+        <div class="flow-card-primary">${gasTotalText}</div>
+        ${data.gasCostTotal !== null ? `<div class="flow-card-secondary">${this.formatCost(data.gasCostTotal)}</div>` : ''}
+      </div>
+      ${vsPreviousHtml}
     `;
 
     parent.appendChild(card);
@@ -605,7 +658,20 @@ export class EnergySection {
   }
 
   private formatCost(cost: number): string {
+    const currency = this.currentHass?.config?.currency;
+    const lang = this.currentHass?.locale?.language || this.currentHass?.language || 'en';
+    if (currency) {
+      try {
+        return new Intl.NumberFormat(lang, { style: 'currency', currency }).format(cost);
+      } catch {
+        // fall through to plain formatting below
+      }
+    }
     return `$${cost.toFixed(2)}`;
+  }
+
+  private formatGas(value: number, unit: string): string {
+    return `${value.toFixed(1)} ${unit}`;
   }
 
   // ==================== DATA FETCHING ====================
@@ -615,9 +681,12 @@ export class EnergySection {
       const prefs = await this.getEnergyPrefs(hass);
       if (!prefs?.energy_sources?.length) return null;
 
+      const showGas = await this.customizationManager.getShowGas();
+
       const gridSources = prefs.energy_sources.filter((s: any) => s.type === 'grid');
       const solarSource = prefs.energy_sources.find((s: any) => s.type === 'solar');
       const batterySource = prefs.energy_sources.find((s: any) => s.type === 'battery');
+      const gasSource = showGas ? prefs.energy_sources.find((s: any) => s.type === 'gas') : undefined;
 
       if (gridSources.length === 0) return null;
 
@@ -687,6 +756,18 @@ export class EnergySection {
         }
       }
 
+      // Gas
+      let gasToday: number | null = null;
+      let gasUnit = 'm³';
+      if (gasSource?.stat_energy_from) {
+        const gasEntity = gasSource.stat_energy_from;
+        gasUnit = hass.states[gasEntity]?.attributes?.unit_of_measurement || gasUnit;
+        const gasStats = await this.fetchPeriodStatistics(hass, [gasEntity], startOfDay, now, 'hour');
+        if (gasStats?.[gasEntity]) {
+          gasToday = gasStats[gasEntity].reduce((sum: number, s: any) => sum + (s.change ?? 0), 0);
+        }
+      }
+
       return {
         currentPower,
         todayTotal: todayTotal > 0 ? todayTotal : null,
@@ -695,8 +776,11 @@ export class EnergySection {
         solarToday,
         batteryPercent,
         gridReturn,
+        gasToday,
+        gasUnit,
         hasSolar: !!solarSource,
         hasBattery: !!batterySource,
+        hasGas: !!gasSource,
         gridEntityId: gridFromEntities[0] || null
       };
     } catch (err) {
@@ -710,9 +794,13 @@ export class EnergySection {
       const prefs = await this.getEnergyPrefs(hass);
       if (!prefs?.energy_sources?.length) return null;
 
+      const showCost = await this.customizationManager.getShowCost();
+      const showGas = await this.customizationManager.getShowGas();
+
       const gridSources = prefs.energy_sources.filter((s: any) => s.type === 'grid');
       const solarSource = prefs.energy_sources.find((s: any) => s.type === 'solar');
       const batterySource = prefs.energy_sources.find((s: any) => s.type === 'battery');
+      const gasSource = showGas ? prefs.energy_sources.find((s: any) => s.type === 'gas') : undefined;
 
       if (gridSources.length === 0) return null;
 
@@ -736,10 +824,16 @@ export class EnergySection {
       if (battToEntity) allEntities.push(battToEntity);
       allEntities.push(...gridToEntities);
       allEntities.push(...costEntities);
+      const gasEntity = gasSource ? (gasSource as any).stat_energy_from : null;
+      const gasCostEntity = gasSource ? (gasSource as any).stat_cost : null;
+      if (gasEntity) allEntities.push(gasEntity);
+      if (gasCostEntity) allEntities.push(gasCostEntity);
+
+      const prevEntities = gasEntity ? [...gridFromEntities, gasEntity] : gridFromEntities;
 
       const [currentStats, prevStats, deviceData] = await Promise.all([
         this.fetchPeriodStatistics(hass, allEntities, start, end, statPeriod),
-        this.fetchPeriodStatistics(hass, gridFromEntities, prevStart, prevEnd, statPeriod),
+        this.fetchPeriodStatistics(hass, prevEntities, prevStart, prevEnd, statPeriod),
         this.fetchDeviceConsumption(hass, prefs, start, end, statPeriod)
       ]);
 
@@ -788,17 +882,7 @@ export class EnergySection {
       }
 
       // Cost
-      let costTotal: number | null = null;
-      if (costEntities.length > 0 && currentStats) {
-        costTotal = 0;
-        for (const costEntity of costEntities) {
-          const costStats = currentStats[costEntity];
-          if (costStats) {
-            costTotal += costStats.reduce((sum: number, s: any) => sum + (s.change ?? 0), 0);
-          }
-        }
-        if (costTotal === 0) costTotal = null;
-      }
+      const costTotal = showCost && currentStats ? this.computeGridCostTotal(gridSources, currentStats) : null;
 
       // Solar
       let solarPower: number | null = null;
@@ -862,6 +946,24 @@ export class EnergySection {
         selfSufficiency = Math.min(100, Math.max(0, (solarUsed / periodTotal) * 100));
       }
 
+      // Gas
+      let gasPeriodTotal: number | null = null;
+      let gasCostTotal: number | null = null;
+      const gasUnit = (gasEntity && hass.states[gasEntity]?.attributes?.unit_of_measurement) || 'm³';
+      if (gasEntity && currentStats?.[gasEntity]) {
+        gasPeriodTotal = currentStats[gasEntity].reduce((sum: number, s: any) => sum + (s.change ?? 0), 0);
+      }
+      if (showCost && gasCostEntity && currentStats?.[gasCostEntity]) {
+        gasCostTotal = currentStats[gasCostEntity].reduce((sum: number, s: any) => sum + (s.change ?? 0), 0);
+      } else if (showCost && gasPeriodTotal !== null && (gasSource as any)?.number_energy_price) {
+        gasCostTotal = gasPeriodTotal * (gasSource as any).number_energy_price;
+      }
+
+      let gasPreviousPeriodTotal: number | null = null;
+      if (gasEntity && prevStats?.[gasEntity]) {
+        gasPreviousPeriodTotal = prevStats[gasEntity].reduce((sum: number, s: any) => sum + (s.change ?? 0), 0);
+      }
+
       return {
         currentPower,
         periodTotal: periodTotal > 0 ? periodTotal : null,
@@ -875,9 +977,14 @@ export class EnergySection {
         batteryDischarged,
         gridReturn,
         selfSufficiency,
+        gasPeriodTotal,
+        gasCostTotal,
+        gasPreviousPeriodTotal,
+        gasUnit,
         hasSolar: !!solarSource,
         hasBattery: !!batterySource,
         hasGridReturn: gridToEntities.length > 0,
+        hasGas: !!gasSource,
         devices: deviceData,
         costTotal
       };
@@ -1077,6 +1184,57 @@ export class EnergySection {
       }
     }
     return result;
+  }
+
+  private getSourceFromEntities(source: any): string[] {
+    if (source.flow_from?.length) return source.flow_from.map((f: any) => f.stat_energy_from);
+    if (source.stat_energy_from) return [source.stat_energy_from];
+    return [];
+  }
+
+  // Grid sources without an explicit cost stat (common for UI-configured multi-tariff
+  // meters) fall back to consumption * number_energy_price, computed per-source since
+  // each tariff can have a different price.
+  private computeGridCostTotal(gridSources: any[], currentStats: any): number | null {
+    let total = 0;
+    let found = false;
+
+    for (const source of gridSources) {
+      const costIds: string[] = source.flow_from?.length
+        ? source.flow_from.map((f: any) => f.stat_cost).filter(Boolean)
+        : source.stat_cost
+          ? [source.stat_cost]
+          : [];
+
+      if (costIds.length) {
+        for (const id of costIds) {
+          const stats = currentStats?.[id];
+          if (stats) {
+            total += stats.reduce((sum: number, s: any) => sum + (s.change ?? 0), 0);
+            found = true;
+          }
+        }
+        continue;
+      }
+
+      if (source.number_energy_price) {
+        let sourceConsumption = 0;
+        let hasConsumption = false;
+        for (const id of this.getSourceFromEntities(source)) {
+          const stats = currentStats?.[id];
+          if (stats) {
+            sourceConsumption += stats.reduce((sum: number, s: any) => sum + (s.change ?? 0), 0);
+            hasConsumption = true;
+          }
+        }
+        if (hasConsumption) {
+          total += sourceConsumption * source.number_energy_price;
+          found = true;
+        }
+      }
+    }
+
+    return found ? total : null;
   }
 
   private findCurrentPower(hass: any, energyEntityIds: string[]): number | null {
@@ -1427,6 +1585,10 @@ export class EnergySection {
         color: #4ADE80;
       }
 
+      .energy-extra-icon.gas {
+        color: #FF9F0A;
+      }
+
       .energy-extra-sub {
         font-size: 12px;
         font-weight: 400;
@@ -1602,6 +1764,10 @@ export class EnergySection {
         color: #5AC8FA;
       }
 
+      .flow-card-icon.gas {
+        color: #FF9F0A;
+      }
+
       .flow-card-icon.sufficiency {
         color: #4ADE80;
       }
@@ -1629,6 +1795,12 @@ export class EnergySection {
         font-size: 14px;
         font-weight: 400;
         color: rgba(255, 255, 255, 0.5);
+      }
+
+      .flow-card-vs-previous {
+        font-size: 12px;
+        font-weight: 500;
+        margin-top: 8px;
       }
 
       /* ========== BATTERY BAR ========== */

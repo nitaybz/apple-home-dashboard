@@ -219,6 +219,7 @@
     "today": "Hoy",
     "solar": "Solar",
     "battery": "Batería",
+    "gas": "Gas",
     "grid_return": "Retorno a Red",
     "now": "AHORA",
     "active": "Activo",
@@ -236,7 +237,8 @@
     "charged": "Cargada",
     "discharged": "Descargada",
     "returned_to_grid": "Retorno a Red",
-    "self_sufficiency": "Autosuficiencia"
+    "self_sufficiency": "Autosuficiencia",
+    "gas_consumption": "Consumo de Gas"
   },
   "errors": {
     "entity_not_found": "Entidad no encontrada",
@@ -272,7 +274,11 @@
     "search_weather_entity": "Buscar entidades del clima...",
     "weather_entity_description": "Selecciona una entidad del clima para mostrar una sección del clima en la pantalla de inicio",
     "show_energy": "Mostrar Sección de Energía",
-    "show_energy_description": "Muestra una tarjeta resumen de energía en la pantalla principal con consumo actual y gráfico de consumo diario"
+    "show_energy_description": "Muestra una tarjeta resumen de energía en la pantalla principal con consumo actual y gráfico de consumo diario",
+    "show_cost": "Mostrar Costo",
+    "show_cost_description": "Muestra las cifras de costo en el panel de energía cuando estén disponibles",
+    "show_gas": "Mostrar Gas",
+    "show_gas_description": "Muestra el consumo de gas en la pantalla principal y el panel de energía cuando esté configurado"
   },
   "status_messages": {
     "unavailable": "No disponible",

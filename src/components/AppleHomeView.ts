@@ -149,6 +149,10 @@ export class AppleHomeView extends HTMLElement {
   }
 
   disconnectedCallback() {
+    // Persist anything still held back by edit mode, so pending reorders are not
+    // lost if the view is torn down (navigation, reload) before edit mode ends.
+    void this.customizationManager.flushDeferredSaves();
+
     // Clean up event listeners
     if (this.visibilityChangeHandler) {
       document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
@@ -1794,8 +1798,17 @@ export class AppleHomeView extends HTMLElement {
   }
 
   private handleEditModeChange(editMode: boolean) {
+    // Entering edit mode holds customization writes in memory. Every
+    // `lovelace/config/save` makes Home Assistant re-render the dashboard from
+    // the strategy, which rebuilds this component and resets edit mode - so
+    // persisting on each drop would exit edit mode after every single card move.
+    // Changes are flushed once, when the user leaves edit mode.
+    if (editMode) {
+      this.customizationManager.beginDeferredSaves();
+    } else {
+      void this.customizationManager.flushDeferredSaves();
+    }
 
-    
     // Update chips edit mode
     if (this.chipsElement) {
       this.chipsElement.setEditMode(editMode);

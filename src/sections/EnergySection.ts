@@ -188,8 +188,8 @@ export class EnergySection {
     const currentHeader = document.createElement('div');
     currentHeader.className = 'energy-page-current';
     const prefs = await this.getEnergyPrefs(hass);
-    const gridSource = prefs?.energy_sources?.find((s: any) => s.type === 'grid');
-    const gridFromEntities = gridSource?.flow_from?.map((f: any) => f.stat_energy_from) || [];
+    const gridSources = prefs?.energy_sources?.filter((s: any) => s.type === 'grid') || [];
+    const gridFromEntities = this.getGridFromEntities(gridSources);
     const currentPower = this.findCurrentPower(hass, gridFromEntities);
 
     currentHeader.innerHTML = `
@@ -615,13 +615,13 @@ export class EnergySection {
       const prefs = await this.getEnergyPrefs(hass);
       if (!prefs?.energy_sources?.length) return null;
 
-      const gridSource = prefs.energy_sources.find((s: any) => s.type === 'grid');
+      const gridSources = prefs.energy_sources.filter((s: any) => s.type === 'grid');
       const solarSource = prefs.energy_sources.find((s: any) => s.type === 'solar');
       const batterySource = prefs.energy_sources.find((s: any) => s.type === 'battery');
 
-      if (!gridSource) return null;
+      if (gridSources.length === 0) return null;
 
-      const gridFromEntities = gridSource.flow_from?.map((f: any) => f.stat_energy_from) || [];
+      const gridFromEntities = this.getGridFromEntities(gridSources);
       const currentPower = this.findCurrentPower(hass, gridFromEntities);
 
       const now = new Date();
@@ -672,7 +672,7 @@ export class EnergySection {
       }
 
       // Grid return
-      const gridToEntities = gridSource.flow_to?.map((f: any) => f.stat_energy_to) || [];
+      const gridToEntities = this.getGridToEntities(gridSources);
       let gridReturn: number | null = null;
       if (gridToEntities.length > 0) {
         const returnStats = await this.fetchPeriodStatistics(hass, gridToEntities, startOfDay, now, 'hour');
@@ -710,15 +710,15 @@ export class EnergySection {
       const prefs = await this.getEnergyPrefs(hass);
       if (!prefs?.energy_sources?.length) return null;
 
-      const gridSource = prefs.energy_sources.find((s: any) => s.type === 'grid');
+      const gridSources = prefs.energy_sources.filter((s: any) => s.type === 'grid');
       const solarSource = prefs.energy_sources.find((s: any) => s.type === 'solar');
       const batterySource = prefs.energy_sources.find((s: any) => s.type === 'battery');
 
-      if (!gridSource) return null;
+      if (gridSources.length === 0) return null;
 
-      const gridFromEntities = gridSource.flow_from?.map((f: any) => f.stat_energy_from) || [];
-      const gridToEntities = gridSource.flow_to?.map((f: any) => f.stat_energy_to) || [];
-      const costEntities = gridSource.flow_from?.map((f: any) => f.stat_cost).filter(Boolean) || [];
+      const gridFromEntities = this.getGridFromEntities(gridSources);
+      const gridToEntities = this.getGridToEntities(gridSources);
+      const costEntities = this.getGridCostEntities(gridSources);
 
       const currentPower = this.findCurrentPower(hass, gridFromEntities);
 
@@ -933,8 +933,9 @@ export class EnergySection {
       this.prefsCache = { data: prefs, timestamp: Date.now() };
 
       // Cache grid entity IDs statically so getTotalPower can use them
-      const gridSource = prefs?.energy_sources?.find((s: any) => s.type === 'grid');
-      EnergySection.cachedGridEntityIds = gridSource?.flow_from?.map((f: any) => f.stat_energy_from) || null;
+      const gridSources = prefs?.energy_sources?.filter((s: any) => s.type === 'grid') || [];
+      const gridEntityIds = this.getGridFromEntities(gridSources);
+      EnergySection.cachedGridEntityIds = gridEntityIds.length > 0 ? gridEntityIds : null;
 
       return prefs;
     } catch {
@@ -1037,13 +1038,58 @@ export class EnergySection {
 
   // ==================== ENTITY HELPERS ====================
 
+  // Grid consumption/return/cost can be represented either as a `flow_from`/`flow_to`
+  // array on a single source (older/manually-authored configs), or as separate
+  // `stat_energy_from`/`stat_energy_to`/`stat_cost` fields on each of several
+  // independent grid-type sources (what the current HA UI produces for multi-tariff
+  // meters, e.g. day/night). Support both, across all grid sources, not just the first.
+  private getGridFromEntities(gridSources: any[]): string[] {
+    const result: string[] = [];
+    for (const source of gridSources) {
+      if (source.flow_from?.length) {
+        result.push(...source.flow_from.map((f: any) => f.stat_energy_from));
+      } else if (source.stat_energy_from) {
+        result.push(source.stat_energy_from);
+      }
+    }
+    return result;
+  }
+
+  private getGridToEntities(gridSources: any[]): string[] {
+    const result: string[] = [];
+    for (const source of gridSources) {
+      if (source.flow_to?.length) {
+        result.push(...source.flow_to.map((f: any) => f.stat_energy_to));
+      } else if (source.stat_energy_to) {
+        result.push(source.stat_energy_to);
+      }
+    }
+    return result;
+  }
+
+  private getGridCostEntities(gridSources: any[]): string[] {
+    const result: string[] = [];
+    for (const source of gridSources) {
+      if (source.flow_from?.length) {
+        result.push(...source.flow_from.map((f: any) => f.stat_cost).filter(Boolean));
+      } else if (source.stat_cost) {
+        result.push(source.stat_cost);
+      }
+    }
+    return result;
+  }
+
   private findCurrentPower(hass: any, energyEntityIds: string[]): number | null {
     let totalPower = 0;
     let found = false;
+    const seenDevices = new Set<string>();
 
     for (const energyEntityId of energyEntityIds) {
       const entityRegistry = hass.entities?.[energyEntityId];
       if (!entityRegistry?.device_id) continue;
+      // Multiple energy entities (e.g. day/night tariffs) can share one physical
+      // meter device; only count that device's power sensor once.
+      if (seenDevices.has(entityRegistry.device_id)) continue;
 
       for (const [eid, reg] of Object.entries(hass.entities || {})) {
         const r = reg as any;
@@ -1059,6 +1105,7 @@ export class EnergySection {
         if (!isNaN(val)) {
           totalPower += val;
           found = true;
+          seenDevices.add(entityRegistry.device_id);
           break;
         }
       }
@@ -1106,10 +1153,14 @@ export class EnergySection {
     if (EnergySection.cachedGridEntityIds && EnergySection.cachedGridEntityIds.length > 0 && hass.entities) {
       let total = 0;
       let found = false;
+      const seenDevices = new Set<string>();
 
       for (const energyEntityId of EnergySection.cachedGridEntityIds) {
         const entityRegistry = hass.entities[energyEntityId] as any;
         if (!entityRegistry?.device_id) continue;
+        // Multiple grid flow entities (e.g. day/night tariffs) can share one
+        // physical meter device; only count that device's power sensor once.
+        if (seenDevices.has(entityRegistry.device_id)) continue;
 
         for (const [eid, reg] of Object.entries(hass.entities || {})) {
           const r = reg as any;
@@ -1123,7 +1174,8 @@ export class EnergySection {
           if (!isNaN(val)) {
             total += val;
             found = true;
-            break; // take first power sensor per grid entity
+            seenDevices.add(entityRegistry.device_id);
+            break; // take first power sensor per grid device
           }
         }
       }

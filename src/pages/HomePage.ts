@@ -52,34 +52,19 @@ export class HomePage {
     }
   }
 
-  private createHomeTitle(title: string): HTMLElement {
-    const titleElement = document.createElement('h1');
-    titleElement.className = 'apple-page-title';
-    titleElement.textContent = title;
-    return titleElement;
-  }
-
   async render(
     container: HTMLElement,
     hass: any,
-    title: string,
     onTallToggle?: (entityId: string, areaId: string) => void | Promise<void | boolean>
   ): Promise<void> {
     // Remove only dynamic content, keep permanent elements (header, chips) in place
+    // The home name is shown in the always-visible header instead of an in-page title,
+    // to save vertical space (see AppleHeader's alwaysShowTitle).
     const permanentSelectors = ['.apple-home-header', '.permanent-chips'];
     Array.from(container.children).forEach(child => {
       const isPermanent = permanentSelectors.some(sel => child.matches(sel));
       if (!isPermanent) child.remove();
     });
-
-    // Add home title after header but before chips
-    const homeTitle = this.createHomeTitle(title);
-    const existingPermanentChips = container.querySelector('.permanent-chips');
-    if (existingPermanentChips) {
-      container.insertBefore(homeTitle, existingPermanentChips);
-    } else {
-      container.appendChild(homeTitle);
-    }
 
     try {
       // Fetch all data in parallel

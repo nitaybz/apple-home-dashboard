@@ -21,6 +21,8 @@ export interface HomeSettingsData {
   showEnergy?: boolean;
   showCost?: boolean;
   showGas?: boolean;
+  headerButtonIcon?: string;
+  headerButtonPath?: string;
 }
 
 export class HomeSettingsManager {
@@ -97,7 +99,9 @@ export class HomeSettingsManager {
       showSwitches: customizations.home?.show_switches || false,
       showEnergy: customizations.home?.show_energy || false,
       showCost: customizations.home?.show_cost !== false,
-      showGas: customizations.home?.show_gas !== false
+      showGas: customizations.home?.show_gas !== false,
+      headerButtonIcon: customizations.home?.header_button_icon || undefined,
+      headerButtonPath: customizations.home?.header_button_path || undefined
     };
 
     // Create a copy for temporary editing
@@ -116,7 +120,9 @@ export class HomeSettingsManager {
       showSwitches: this.settings.showSwitches,
       showEnergy: this.settings.showEnergy,
       showCost: this.settings.showCost,
-      showGas: this.settings.showGas
+      showGas: this.settings.showGas,
+      headerButtonIcon: this.settings.headerButtonIcon,
+      headerButtonPath: this.settings.headerButtonPath
     };
 
     }
@@ -286,6 +292,27 @@ export class HomeSettingsManager {
           </div>
         </div>
         <p class="settings-section-description">${localize('settings.exclude_from_dashboard_description')}</p>
+      </div>
+
+      <div class="settings-section">
+        <h3 class="settings-section-header">${localize('settings.header_button')}</h3>
+        <div class="settings-card">
+          <input
+            type="text"
+            class="settings-text-input"
+            data-setting="headerButtonIcon"
+            placeholder="${localize('settings.header_button_icon_placeholder')}"
+            value="${this.tempSettings.headerButtonIcon || ''}"
+          />
+          <input
+            type="text"
+            class="settings-text-input"
+            data-setting="headerButtonPath"
+            placeholder="${localize('settings.header_button_path_placeholder')}"
+            value="${this.tempSettings.headerButtonPath || ''}"
+          />
+        </div>
+        <p class="settings-section-description">${localize('settings.header_button_description')}</p>
       </div>
 
       <div class="settings-section">
@@ -683,6 +710,32 @@ export class HomeSettingsManager {
         color: rgba(255, 255, 255, 0.4);
       }
 
+      .settings-text-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 16px;
+        background: rgba(39, 39, 39, 0.8);
+        border: 1px solid rgba(84, 84, 88, 0.8);
+        border-radius: var(--apple-input-radius, 10px);
+        color: white;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s ease;
+        margin-top: 16px;
+      }
+
+      .settings-text-input + .settings-text-input {
+        margin-top: 8px;
+      }
+
+      .settings-text-input:focus {
+        border-color: #ffaf00;
+      }
+
+      .settings-text-input::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+      }
+
       .autocomplete-results {
         position: absolute;
         top: 100%;
@@ -992,6 +1045,22 @@ export class HomeSettingsManager {
 
     // Setup background settings
     this.setupBackgroundEventListeners();
+
+    // Setup plain text settings (e.g. custom header button)
+    this.setupTextInputs();
+  }
+
+  private setupTextInputs() {
+    const inputs = this.modal?.querySelectorAll('.settings-text-input');
+    inputs?.forEach(input => {
+      const setting = input.getAttribute('data-setting') as keyof HomeSettingsData;
+      if (!setting) return;
+
+      input.addEventListener('input', (e) => {
+        const value = (e.target as HTMLInputElement).value.trim();
+        (this.tempSettings[setting] as string | undefined) = value || undefined;
+      });
+    });
   }
 
   private setupAutocomplete() {
@@ -1312,7 +1381,9 @@ export class HomeSettingsManager {
       this.settings.showEnergy !== this.tempSettings.showEnergy ||
       this.settings.showCost !== this.tempSettings.showCost ||
       this.settings.showGas !== this.tempSettings.showGas ||
-      this.settings.weatherEntity !== this.tempSettings.weatherEntity;
+      this.settings.weatherEntity !== this.tempSettings.weatherEntity ||
+      this.settings.headerButtonIcon !== this.tempSettings.headerButtonIcon ||
+      this.settings.headerButtonPath !== this.tempSettings.headerButtonPath;
     
     // Apply temporary settings to actual settings
     this.settings.favoriteAccessories = [...this.tempSettings.favoriteAccessories];
@@ -1330,6 +1401,8 @@ export class HomeSettingsManager {
     this.settings.showEnergy = this.tempSettings.showEnergy;
     this.settings.showCost = this.tempSettings.showCost;
     this.settings.showGas = this.tempSettings.showGas;
+    this.settings.headerButtonIcon = this.tempSettings.headerButtonIcon;
+    this.settings.headerButtonPath = this.tempSettings.headerButtonPath;
 
     // Start modal fade immediately (while save happens in parallel)
     if (this.modal) {
@@ -1398,7 +1471,9 @@ export class HomeSettingsManager {
     home.show_energy = this.settings.showEnergy;
     home.show_cost = this.settings.showCost;
     home.show_gas = this.settings.showGas;
-    
+    home.header_button_icon = this.settings.headerButtonIcon || null;
+    home.header_button_path = this.settings.headerButtonPath || null;
+
     const ui = this.customizationManager.getCustomization('ui') || {};
     ui.hide_header = this.settings.hideHeader;
     ui.hide_sidebar = this.settings.hideSidebar;

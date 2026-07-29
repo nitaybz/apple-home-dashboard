@@ -584,23 +584,30 @@ export class AppleHeader {
   }
 
   private navigateToCustomPath(path: string) {
-    // External URLs or absolute HA paths navigate directly
-    if (/^https?:\/\//.test(path) || path.startsWith('/')) {
+    // Only true external URLs need a real browser navigation. Absolute HA paths
+    // (e.g. to a different dashboard) still go through HA's client-side router
+    // via pushState + location-changed, same as the sidebar does, so the
+    // transition stays smooth instead of showing the HA loading screen.
+    if (/^https?:\/\//.test(path)) {
       window.location.href = path;
       return;
     }
 
-    const currentPath = window.location.pathname;
-    let basePath = '';
+    let newUrl = path;
+    if (!path.startsWith('/')) {
+      const currentPath = window.location.pathname;
+      let basePath = '';
 
-    if (currentPath.startsWith('/lovelace/') || currentPath === '/lovelace') {
-      basePath = '/lovelace/';
-    } else {
-      const pathParts = currentPath.split('/').filter(part => part.length > 0);
-      basePath = pathParts.length > 0 ? `/${pathParts[0]}/` : '/lovelace/';
+      if (currentPath.startsWith('/lovelace/') || currentPath === '/lovelace') {
+        basePath = '/lovelace/';
+      } else {
+        const pathParts = currentPath.split('/').filter(part => part.length > 0);
+        basePath = pathParts.length > 0 ? `/${pathParts[0]}/` : '/lovelace/';
+      }
+
+      newUrl = `${basePath}${path}`;
     }
 
-    const newUrl = `${basePath}${path}`;
     window.history.pushState(null, '', newUrl);
     const event = new Event('location-changed', { bubbles: true, composed: true });
     window.dispatchEvent(event);

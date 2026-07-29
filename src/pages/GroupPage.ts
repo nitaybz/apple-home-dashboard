@@ -438,9 +438,12 @@ export class GroupPage {
       });
     }
     
-    // Render sections in order, respecting visibility settings
+    // Render sections in order, respecting visibility settings. The Cameras bucket is
+    // exempt: hiding it declutters the Home page grid, but this method only ever
+    // receives cameras for the Security page, where they should stay reachable.
     for (const sectionId of orderedSectionIds) {
-      if (!hiddenSections.includes(sectionId) && availableSections.has(sectionId)) {
+      const isHidden = sectionId !== 'cameras_section' && hiddenSections.includes(sectionId);
+      if (!isHidden && availableSections.has(sectionId)) {
         await availableSections.get(sectionId)!();
       }
     }

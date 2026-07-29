@@ -159,9 +159,14 @@ export class GroupPage {
       // Batch-fetch exclusion list once, then filter synchronously
       const excludedFromDashboard = new Set(await this.customizationManager?.getExcludedFromDashboard() || []);
 
-      const filteredEntities = supportedEntities.filter(entity =>
-        !excludedFromDashboard.has(entity.entity_id) && !this.isEntityInHiddenArea(entity, devices, hiddenSections)
-      );
+      // Cameras are exempt from room-hidden filtering: hiding a room from the Home page
+      // is meant to declutter that grid, not to remove its cameras from Security. Cameras
+      // are only removed here via the explicit "Exclude from Dashboard" list.
+      const filteredEntities = supportedEntities.filter(entity => {
+        if (excludedFromDashboard.has(entity.entity_id)) return false;
+        if (DashboardConfig.isCamerasDomain(entity.entity_id.split('.')[0])) return true;
+        return !this.isEntityInHiddenArea(entity, devices, hiddenSections);
+      });
       const filteredStatusEntities = statusEntities.filter(entity =>
         !excludedFromDashboard.has(entity.entity_id) && !this.isEntityInHiddenArea(entity, devices, hiddenSections)
       );
@@ -433,9 +438,12 @@ export class GroupPage {
       });
     }
     
-    // Render sections in order, respecting visibility settings
+    // Render sections in order, respecting visibility settings. The Cameras bucket is
+    // exempt: hiding it declutters the Home page grid, but this method only ever
+    // receives cameras for the Security page, where they should stay reachable.
     for (const sectionId of orderedSectionIds) {
-      if (!hiddenSections.includes(sectionId) && availableSections.has(sectionId)) {
+      const isHidden = sectionId !== 'cameras_section' && hiddenSections.includes(sectionId);
+      if (!isHidden && availableSections.has(sectionId)) {
         await availableSections.get(sectionId)!();
       }
     }

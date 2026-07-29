@@ -277,7 +277,11 @@
     "show_cost": "Kosten Tonen",
     "show_cost_description": "Toont kostencijfers op het energiedashboard indien beschikbaar",
     "show_gas": "Gas Tonen",
-    "show_gas_description": "Toont gasverbruik op het startscherm en energiedashboard indien geconfigureerd"
+    "show_gas_description": "Toont gasverbruik op het startscherm en energiedashboard indien geconfigureerd",
+    "header_button": "Aangepaste menuknop",
+    "header_button_description": "Voegt een knop naast het menupictogram toe die bij tikken naar een ander dashboard of andere pagina navigeert",
+    "header_button_icon_placeholder": "Pictogram (bijv. mdi:shield-home)",
+    "header_button_path_placeholder": "Pad (bijv. security of lovelace/security)"
   },
   "status_messages": {
     "unavailable": "Niet beschikbaar",

@@ -415,6 +415,7 @@ export class AppleHeader {
             </div>
             <div class="apple-header-scrolled-chips"></div>
           </div>
+          ${this.getCustomButtonHTML()}
           ${this.currentConfig.showMenu ? `
             <button class="apple-header-menu-button ${LiquidGlassClasses.headerButton}">
               ${this.getMenuButtonContent()}
@@ -474,6 +475,7 @@ export class AppleHeader {
               </div>
               <div class="apple-header-scrolled-chips"></div>
             </div>
+            ${this.getCustomButtonHTML()}
             ${this.currentConfig.showMenu ? `
               <button class="apple-header-menu-button ${LiquidGlassClasses.headerButton}">
                 ${this.getMenuButtonContent()}
@@ -558,6 +560,92 @@ export class AppleHeader {
       }, 300);
     });
 
+  }
+
+  /**
+   * User-configured extra header button (icon + navigation path), set via Home Settings.
+   */
+  private getHeaderButtonConfig(): { icon: string; path: string } | null {
+    if (!this.customizationManager) return null;
+    const customizations = this.customizationManager.getCustomizations();
+    const icon = customizations.home?.header_button_icon;
+    const path = customizations.home?.header_button_path;
+    return icon && path ? { icon, path } : null;
+  }
+
+  private getCustomButtonHTML(): string {
+    const config = this.getHeaderButtonConfig();
+    if (!config) return '';
+    return `
+      <button class="apple-header-custom-button ${LiquidGlassClasses.headerButton}" data-path="${config.path}">
+        <ha-icon icon="${config.icon}"></ha-icon>
+      </button>
+    `;
+  }
+
+  private navigateToCustomPath(path: string) {
+    // External URLs or absolute HA paths navigate directly
+    if (/^https?:\/\//.test(path) || path.startsWith('/')) {
+      window.location.href = path;
+      return;
+    }
+
+    const currentPath = window.location.pathname;
+    let basePath = '';
+
+    if (currentPath.startsWith('/lovelace/') || currentPath === '/lovelace') {
+      basePath = '/lovelace/';
+    } else {
+      const pathParts = currentPath.split('/').filter(part => part.length > 0);
+      basePath = pathParts.length > 0 ? `/${pathParts[0]}/` : '/lovelace/';
+    }
+
+    const newUrl = `${basePath}${path}`;
+    window.history.pushState(null, '', newUrl);
+    const event = new Event('location-changed', { bubbles: true, composed: true });
+    window.dispatchEvent(event);
+  }
+
+  private attachCustomButtonListener(button: HTMLButtonElement) {
+    button.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
+      const path = button.dataset.path;
+      if (path) this.navigateToCustomPath(path);
+    });
+  }
+
+  /**
+   * Re-reads the custom header button config and creates/updates/removes its DOM
+   * element accordingly. Called after Home Settings saves, since the button's
+   * config lives in customizations rather than HeaderConfig.
+   */
+  refreshCustomButton() {
+    if (!this.headerElement) return;
+    const config = this.getHeaderButtonConfig();
+    let button = this.headerElement.querySelector('.apple-header-custom-button') as HTMLButtonElement | null;
+
+    if (!config) {
+      button?.remove();
+      return;
+    }
+
+    if (!button) {
+      const content = this.headerElement.querySelector('.apple-header-content');
+      const menuButton = this.headerElement.querySelector('.apple-header-menu-button');
+      if (!content) return;
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = this.getCustomButtonHTML().trim();
+      button = wrapper.firstElementChild as HTMLButtonElement;
+      if (menuButton) {
+        content.insertBefore(button, menuButton);
+      } else {
+        content.appendChild(button);
+      }
+      this.attachCustomButtonListener(button);
+    } else {
+      button.querySelector('ha-icon')?.setAttribute('icon', config.icon);
+      button.dataset.path = config.path;
+    }
   }
 
   private getMenuButtonContent(): string {
@@ -770,6 +858,12 @@ export class AppleHeader {
         e.stopPropagation();
         this.openSidebar();
       });
+    }
+
+    // Custom (user-configurable) button click (if it exists)
+    const customButton = this.headerElement?.querySelector('.apple-header-custom-button') as HTMLButtonElement;
+    if (customButton) {
+      this.attachCustomButtonListener(customButton);
     }
 
     // Window resize listener to update button visibility based on mobile/desktop
@@ -1982,6 +2076,29 @@ export class AppleHeader {
         transform: scale(0.97);
       }
 
+      /* Custom (user-configurable) button - positioned just left of the menu button */
+      .apple-header-custom-button {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 64px;
+        z-index: 10;
+        font-family: inherit;
+      }
+
+      .apple-header-custom-button:active {
+        transform: translateY(-50%) scale(0.95);
+      }
+
+      .apple-home-header.group-page .apple-header-custom-button {
+        top: 12px;
+        transform: none;
+      }
+
+      .apple-home-header.group-page .apple-header-custom-button:active {
+        transform: scale(0.97);
+      }
+
       /* RTL positioning for group-page menu button */
       .apple-home-header.group-page.rtl .apple-header-menu-button {
         right: auto !important;
@@ -1993,6 +2110,19 @@ export class AppleHeader {
       .apple-home-header.rtl .apple-header-menu-button {
         right: auto !important;
         left: 16px !important;
+      }
+
+      /* RTL positioning for custom button (mirrors menu button) */
+      .apple-home-header.group-page.rtl .apple-header-custom-button {
+        left: auto !important;
+        right: 64px !important;
+        top: 12px;
+        transform: none;
+      }
+
+      .apple-home-header.rtl .apple-header-custom-button {
+        right: auto !important;
+        left: 64px !important;
       }
 
       /* Mobile adjustments for menu button */
@@ -2007,6 +2137,18 @@ export class AppleHeader {
         .apple-home-header.rtl .apple-header-menu-button {
           right: auto !important;
           left: 12px !important;
+        }
+
+        .apple-header-custom-button {
+          right: 54px;
+          width: 34px;
+          height: 34px;
+          min-width: 34px;
+        }
+
+        .apple-home-header.rtl .apple-header-custom-button {
+          right: auto !important;
+          left: 54px !important;
         }
       }
 

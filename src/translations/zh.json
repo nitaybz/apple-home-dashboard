@@ -277,7 +277,11 @@
     "show_cost": "显示费用",
     "show_cost_description": "在能源仪表板上显示费用数据（如可用）",
     "show_gas": "显示燃气",
-    "show_gas_description": "在主屏幕和能源仪表板上显示燃气消耗（如已配置）"
+    "show_gas_description": "在主屏幕和能源仪表板上显示燃气消耗（如已配置）",
+    "header_button": "自定义菜单按钮",
+    "header_button_description": "在菜单图标旁添加一个按钮，点击后跳转到其他仪表盘或页面",
+    "header_button_icon_placeholder": "图标（例如 mdi:shield-home）",
+    "header_button_path_placeholder": "路径（例如 security 或 lovelace/security）"
   },
   "status_messages": {
     "unavailable": "不可用",

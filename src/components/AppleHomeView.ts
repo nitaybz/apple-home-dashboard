@@ -2509,6 +2509,14 @@ export class AppleHomeView extends HTMLElement {
         didChange = true;
       }
 
+      // --- Custom header button ---
+      const headerButtonChanged =
+        oldHome.header_button_icon !== newHome.header_button_icon ||
+        oldHome.header_button_path !== newHome.header_button_path;
+      if (headerButtonChanged) {
+        this.appleHeader.refreshCustomButton();
+      }
+
       // --- Weather entity ---
       const weatherChanged = oldHome.weather_entity !== newHome.weather_entity;
       if (weatherChanged) {

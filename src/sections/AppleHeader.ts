@@ -17,6 +17,7 @@ export interface HeaderConfig {
   showMenu: boolean;
   showBackButton?: boolean;
   chipsElement?: HTMLElement;
+  alwaysShowTitle?: boolean;
 }
 
 export class AppleHeader {
@@ -159,6 +160,9 @@ export class AppleHeader {
     if (!config.isGroupPage && this.scrolledChipsContainer) {
       this.scrolledChipsContainer.innerHTML = '';
     }
+
+    // Show the title without waiting for scroll (e.g. Home page, to save vertical space)
+    this.headerElement?.classList.toggle('always-show-title', !!config.alwaysShowTitle);
 
   }
 
@@ -506,6 +510,9 @@ export class AppleHeader {
     } else if (this.headerElement) {
       this.headerElement.classList.remove('group-page');
     }
+
+    // Show the title without waiting for scroll (e.g. Home page, to save vertical space)
+    this.headerElement?.classList.toggle('always-show-title', !!this.currentConfig.alwaysShowTitle);
 
     // Get references to the elements (whether existing or newly created)
     this.scrolledTitleElement = this.headerElement.querySelector('.apple-header-scrolled-title') as HTMLElement;
@@ -1731,11 +1738,13 @@ export class AppleHeader {
         margin-right: 0;
       }
 
-      .apple-home-header.scrolled {
+      .apple-home-header.scrolled,
+      .apple-home-header.always-show-title {
         background: transparent;
       }
 
-      .apple-home-header.scrolled::before {
+      .apple-home-header.scrolled::before,
+      .apple-home-header.always-show-title::before {
         content: '';
         position: absolute;
         top: 0;
@@ -1905,7 +1914,8 @@ export class AppleHeader {
         justify-content: center;
       }
 
-      .apple-home-header.scrolled .apple-header-scrolled {
+      .apple-home-header.scrolled .apple-header-scrolled,
+      .apple-home-header.always-show-title .apple-header-scrolled {
         opacity: 1;
         visibility: visible;
         pointer-events: auto;

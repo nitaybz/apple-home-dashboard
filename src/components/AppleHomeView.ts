@@ -558,7 +558,8 @@ export class AppleHomeView extends HTMLElement {
       const homeConfig: HeaderConfig = {
         title: this.config.title || localize('pages.my_home'),
         isGroupPage: false,
-        showMenu: true
+        showMenu: true,
+        alwaysShowTitle: true
       };
       await this.appleHeader.init(this.content, homeConfig);
       // Update page content padding after header is initialized
@@ -2193,7 +2194,6 @@ export class AppleHomeView extends HTMLElement {
         await this.homePage.render(
           this.content,
           this._hass,
-          homeTitle,
           (entityId: string, areaId: string) => this.toggleTallCard(entityId, areaId)
         );
       }

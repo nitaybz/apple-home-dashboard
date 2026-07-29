@@ -328,6 +328,9 @@ export class WeatherSection {
       return this.forecastCache.data;
     }
 
+    // `weather/get_forecasts` (one-shot) was removed on some HA versions in favor of
+    // `weather/subscribe_forecast` (subscription-only) - try the older, cheaper call
+    // first for backward compatibility, then fall back to subscribing for one event.
     try {
       const result = await hass.callWS({
         type: 'weather/get_forecasts',
@@ -340,7 +343,17 @@ export class WeatherSection {
         return forecasts;
       }
     } catch {
-      // WS call not available
+      // WS command not available on this HA version
+    }
+
+    try {
+      const forecasts = await this.subscribeForecastOnce(hass, entityId);
+      if (forecasts.length > 0) {
+        this.forecastCache = { entityId, data: forecasts, timestamp: Date.now() };
+        return forecasts;
+      }
+    } catch {
+      // Subscription not available either
     }
 
     const attrForecast = stateObj.attributes?.forecast;
@@ -350,6 +363,40 @@ export class WeatherSection {
     }
 
     return [];
+  }
+
+  /**
+   * Subscribes to `weather/subscribe_forecast` just long enough to grab one
+   * forecast payload, then unsubscribes - a one-shot fetch built on top of the
+   * subscription-only API that current HA versions require.
+   */
+  private subscribeForecastOnce(hass: any, entityId: string): Promise<ForecastDay[]> {
+    return new Promise((resolve, reject) => {
+      let unsubscribe: (() => void) | undefined;
+      let settled = false;
+
+      const finish = (result: ForecastDay[] | Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        unsubscribe?.();
+        if (result instanceof Error) reject(result);
+        else resolve(result);
+      };
+
+      const timeoutId = setTimeout(() => finish(new Error('Forecast subscription timed out')), 5000);
+
+      hass.connection
+        .subscribeMessage(
+          (event: { forecast?: ForecastDay[] }) => finish(event?.forecast || []),
+          { type: 'weather/subscribe_forecast', entity_id: entityId, forecast_type: 'daily' }
+        )
+        .then((unsub: () => void) => {
+          unsubscribe = unsub;
+          if (settled) unsub();
+        })
+        .catch((error: unknown) => finish(error instanceof Error ? error : new Error(String(error))));
+    });
   }
 
   private injectStyles(container: HTMLElement): void {

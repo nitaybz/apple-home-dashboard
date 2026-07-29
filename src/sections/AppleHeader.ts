@@ -1929,7 +1929,7 @@ export class AppleHeader {
         }
 
       .apple-header-scrolled-title {
-        font-size: 17px;
+        font-size: 20px;
         font-weight: 600;
         color: #ffffff;
         margin: 0;
@@ -2259,9 +2259,9 @@ export class AppleHeader {
         }
 
         .apple-header-scrolled-title {
-          font-size: 16px;
+          font-size: 18px;
         }
-        
+
         /* Adjust padding for mobile fixed header */
         .page-content.has-fixed-header {
           padding-top: 60px; /* Slightly less on mobile */
@@ -2280,9 +2280,9 @@ export class AppleHeader {
         }
         
         .apple-header-scrolled-title {
-          font-size: 15px;
+          font-size: 17px;
         }
-        
+
         .apple-header-dropdown {
           width: 200px;
           right: 8px;
@@ -2306,9 +2306,9 @@ export class AppleHeader {
         }
         
         .apple-header-scrolled-title {
-          font-size: 14px;
+          font-size: 16px;
         }
-        
+
         .apple-header-dropdown {
           width: 180px;
           right: 6px;

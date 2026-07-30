@@ -549,9 +549,10 @@ export class AppleHomeView extends HTMLElement {
     // Determine page type for header configuration
     const isGroupPage = this.config.pageType === 'group';
     const isSpecialPage = ['room', 'scenes', 'cameras'].includes(this.config.pageType);
-    
+    const compactHeader = this.customizationManager.isCompactHeaderEnabled();
+
     // Always ensure Apple Home header exists and is properly configured
-    
+
     // Configure header based on page type - direct to AppleHeader
     if (!isGroupPage && !isSpecialPage) {
       // Home page: configure header for home (show menu, use home title)
@@ -559,7 +560,10 @@ export class AppleHomeView extends HTMLElement {
         title: this.config.title || localize('pages.my_home'),
         isGroupPage: false,
         showMenu: true,
-        alwaysShowTitle: true
+        // Compact mode shows the header title immediately; legacy mode waits for scroll and
+        // relies on HomePage's own big in-page title instead (same as group/room/etc. pages).
+        alwaysShowTitle: compactHeader,
+        compactHeader
       };
       await this.appleHeader.init(this.content, homeConfig);
       // Update page content padding after header is initialized
@@ -568,7 +572,7 @@ export class AppleHomeView extends HTMLElement {
       // Group/Special pages: configure header (show menu and back button for special pages)
       let pageTitle = this.config.title || 'Page';
       let showBackButton = false;
-      
+
       // Set appropriate title and back button based on page type
       if (this.config.pageType === 'room') {
         // For room pages, use config.title (which should be the room name from apple-home-strategy.ts)
@@ -582,13 +586,17 @@ export class AppleHomeView extends HTMLElement {
         pageTitle = localize('pages.cameras');
         showBackButton = true;
       }
-      
+
       const pageConfig: HeaderConfig = {
         title: pageTitle,
         isGroupPage: isGroupPage, // Use same styling as group pages
         isSpecialPage: isSpecialPage, // Add special page flag for immediate scroll header
-        showMenu: !isGroupPage, // Show menu for special pages
-        showBackButton: showBackButton // Show back button for special pages
+        showMenu: true, // Menu stays available on every page, including chiclet/group pages
+        showBackButton: showBackButton, // Show back button for special pages
+        // Compact mode shows the header title immediately, like Home; legacy mode waits for
+        // scroll like the dashboard originally did, relying on the page's own big title instead.
+        alwaysShowTitle: compactHeader,
+        compactHeader
       };
       await this.appleHeader.init(this.content, pageConfig);
     }
@@ -879,7 +887,13 @@ export class AppleHomeView extends HTMLElement {
             display: block;
             visibility: visible;
           }
-          
+
+          /* In compact header mode the sticky top-bar title is always visible, so this
+             separate big page title (group/room/scenes/cameras pages) is redundant. */
+          .page-content.compact-header-active .apple-page-title {
+            display: none;
+          }
+
           .area-section {
             margin-bottom: var(--section-margin);
           }
@@ -2460,11 +2474,23 @@ export class AppleHomeView extends HTMLElement {
     try {
       // Snapshot old customizations
       const oldHome = this.config?.customizations?.home || {};
+      const oldUi = this.config?.customizations?.ui || {};
 
       // Get fresh customizations
       const fresh = this.customizationManager.getCustomizations();
       this.config = { ...this.config, customizations: JSON.parse(JSON.stringify(fresh)) };
       const newHome = fresh?.home || {};
+      const newUi = fresh?.ui || {};
+
+      // --- Compact header toggle ---
+      // Affects title alignment/visibility timing across every page type, so it's simplest
+      // to force a full rebuild rather than trying to patch header/page-title DOM in place.
+      const compactHeaderChanged = (oldUi.compact_header !== false) !== (newUi.compact_header !== false);
+      if (compactHeaderChanged) {
+        this._rendered = false;
+        await this.renderPage('refreshCallback');
+        return;
+      }
 
       let didChange = false;
 
@@ -2509,12 +2535,13 @@ export class AppleHomeView extends HTMLElement {
         didChange = true;
       }
 
-      // --- Custom header button ---
-      const headerButtonChanged =
+      // --- Custom quick-switch header buttons ---
+      const headerButtonsChanged =
+        JSON.stringify(oldHome.header_buttons) !== JSON.stringify(newHome.header_buttons) ||
         oldHome.header_button_icon !== newHome.header_button_icon ||
         oldHome.header_button_path !== newHome.header_button_path;
-      if (headerButtonChanged) {
-        this.appleHeader.refreshCustomButton();
+      if (headerButtonsChanged) {
+        this.appleHeader.refreshCustomButtons();
       }
 
       // --- Weather entity ---

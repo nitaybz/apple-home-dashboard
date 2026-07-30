@@ -10,6 +10,9 @@ import { localize } from '../utils/LocalizationService';
 import { RTLHelper } from '../utils/RTLHelper';
 import { injectLiquidGlassStyles, LiquidGlassClasses, liquidGlassCSS } from '../utils/LiquidGlassStyles';
 
+/** Max configurable quick-switch buttons shown next to the "..." menu (keeps the header from crowding on mobile). */
+const MAX_HEADER_BUTTONS = 3;
+
 export interface HeaderConfig {
   title: string;
   isGroupPage: boolean;
@@ -18,6 +21,9 @@ export interface HeaderConfig {
   showBackButton?: boolean;
   chipsElement?: HTMLElement;
   alwaysShowTitle?: boolean;
+  /** Compact header (default true): title left-aligned in the top bar next to the
+   * hamburger/back button. False restores the original centered title behavior. */
+  compactHeader?: boolean;
 }
 
 export class AppleHeader {
@@ -161,6 +167,9 @@ export class AppleHeader {
       this.scrolledChipsContainer.innerHTML = '';
     }
 
+    // Toggle legacy (non-compact) title styling
+    this.headerElement?.classList.toggle('legacy-title', config.compactHeader === false);
+
     // Show the title without waiting for scroll (e.g. Home page, to save vertical space)
     this.headerElement?.classList.toggle('always-show-title', !!config.alwaysShowTitle);
 
@@ -246,6 +255,11 @@ export class AppleHeader {
       } else {
         this.container.classList.remove('has-fixed-header');
       }
+
+      // In compact mode the sticky header title is always visible, so each page's own big
+      // centered title (.apple-page-title, e.g. GroupPage/RoomPage/ScenesPage/CamerasPage) is
+      // redundant and hidden. In legacy mode it's shown, matching the original behavior.
+      this.container.classList.toggle('compact-header-active', this.currentConfig.compactHeader !== false);
     }
   }
 
@@ -400,30 +414,34 @@ export class AppleHeader {
       // Populate the existing header element
       existingHeader.innerHTML = `
         <div class="apple-header-content">
-          ${this.currentConfig.showBackButton ? `
-            <button class="apple-header-back-button ${LiquidGlassClasses.headerButton}">
-              <ha-icon icon="${RTLHelper.getBackIcon()}"></ha-icon>
-            </button>
-          ` : this.shouldShowSidebarButton() ? `
-            <button class="apple-header-sidebar-button ${LiquidGlassClasses.headerButton}">
-              <ha-icon icon="mdi:menu"></ha-icon>
-            </button>
-          ` : ''}
-          <div class="apple-header-scrolled">
-            <div class="apple-header-scrolled-title-container">
-              <h2 class="apple-header-scrolled-title">${this.currentConfig.title}</h2>
+          <div class="apple-header-start">
+            ${this.currentConfig.showBackButton ? `
+              <button class="apple-header-back-button ${LiquidGlassClasses.headerButton}">
+                <ha-icon icon="${RTLHelper.getBackIcon()}"></ha-icon>
+              </button>
+            ` : this.shouldShowSidebarButton() ? `
+              <button class="apple-header-sidebar-button ${LiquidGlassClasses.headerButton}">
+                <ha-icon icon="mdi:menu"></ha-icon>
+              </button>
+            ` : ''}
+            <div class="apple-header-scrolled">
+              <div class="apple-header-scrolled-title-container">
+                <h2 class="apple-header-scrolled-title">${this.currentConfig.title}</h2>
+              </div>
+              <div class="apple-header-scrolled-chips"></div>
             </div>
-            <div class="apple-header-scrolled-chips"></div>
           </div>
-          ${this.getCustomButtonHTML()}
-          ${this.currentConfig.showMenu ? `
-            <button class="apple-header-menu-button ${LiquidGlassClasses.headerButton}">
-              ${this.getMenuButtonContent()}
-            </button>
-            <div class="apple-header-dropdown">
-              ${this.getDropdownContent()}
-            </div>
-          ` : ''}
+          <div class="apple-header-end">
+            ${this.getCustomButtonsHTML()}
+            ${this.currentConfig.showMenu ? `
+              <button class="apple-header-menu-button ${LiquidGlassClasses.headerButton}">
+                ${this.getMenuButtonContent()}
+              </button>
+              <div class="apple-header-dropdown">
+                ${this.getDropdownContent()}
+              </div>
+            ` : ''}
+          </div>
         </div>
       `;
 
@@ -460,30 +478,34 @@ export class AppleHeader {
       const headerHTML = `
         <div class="apple-home-header ${RTLHelper.isRTL() ? 'rtl' : 'ltr'}">
           <div class="apple-header-content">
-            ${this.currentConfig.showBackButton ? `
-              <button class="apple-header-back-button ${LiquidGlassClasses.headerButton}">
-                <ha-icon icon="${RTLHelper.getBackIcon()}"></ha-icon>
-              </button>
-            ` : this.shouldShowSidebarButton() ? `
-              <button class="apple-header-sidebar-button ${LiquidGlassClasses.headerButton}">
-                <ha-icon icon="mdi:menu"></ha-icon>
-              </button>
-            ` : ''}
-            <div class="apple-header-scrolled">
-              <div class="apple-header-scrolled-title-container">
-                <h2 class="apple-header-scrolled-title">${this.currentConfig.title}</h2>
+            <div class="apple-header-start">
+              ${this.currentConfig.showBackButton ? `
+                <button class="apple-header-back-button ${LiquidGlassClasses.headerButton}">
+                  <ha-icon icon="${RTLHelper.getBackIcon()}"></ha-icon>
+                </button>
+              ` : this.shouldShowSidebarButton() ? `
+                <button class="apple-header-sidebar-button ${LiquidGlassClasses.headerButton}">
+                  <ha-icon icon="mdi:menu"></ha-icon>
+                </button>
+              ` : ''}
+              <div class="apple-header-scrolled">
+                <div class="apple-header-scrolled-title-container">
+                  <h2 class="apple-header-scrolled-title">${this.currentConfig.title}</h2>
+                </div>
+                <div class="apple-header-scrolled-chips"></div>
               </div>
-              <div class="apple-header-scrolled-chips"></div>
             </div>
-            ${this.getCustomButtonHTML()}
-            ${this.currentConfig.showMenu ? `
-              <button class="apple-header-menu-button ${LiquidGlassClasses.headerButton}">
-                ${this.getMenuButtonContent()}
-              </button>
-              <div class="apple-header-dropdown">
-                ${this.getDropdownContent()}
-              </div>
-            ` : ''}
+            <div class="apple-header-end">
+              ${this.getCustomButtonsHTML()}
+              ${this.currentConfig.showMenu ? `
+                <button class="apple-header-menu-button ${LiquidGlassClasses.headerButton}">
+                  ${this.getMenuButtonContent()}
+                </button>
+                <div class="apple-header-dropdown">
+                  ${this.getDropdownContent()}
+                </div>
+              ` : ''}
+            </div>
           </div>
         </div>
       `;
@@ -505,6 +527,9 @@ export class AppleHeader {
         this.headerElement.classList.remove('rtl');
       }
     }
+
+    // Toggle legacy (non-compact) title styling - centered title, buttons overlaid absolutely
+    this.headerElement?.classList.toggle('legacy-title', this.currentConfig.compactHeader === false);
 
     // Add group-page class if this is a group page
     if (this.currentConfig.isGroupPage && this.headerElement) {
@@ -563,24 +588,33 @@ export class AppleHeader {
   }
 
   /**
-   * User-configured extra header button (icon + navigation path), set via Home Settings.
+   * User-configured quick-switch header buttons (icon + navigation path), set via Home Settings.
+   * Falls back to the legacy single icon/path fields for users who haven't resaved Home
+   * Settings since upgrading (HomeSettingsManager migrates them to header_buttons on next save).
    */
-  private getHeaderButtonConfig(): { icon: string; path: string } | null {
-    if (!this.customizationManager) return null;
+  private getHeaderButtonsConfig(): Array<{ icon: string; path: string }> {
+    if (!this.customizationManager) return [];
     const customizations = this.customizationManager.getCustomizations();
+    const buttons = customizations.home?.header_buttons;
+    if (Array.isArray(buttons) && buttons.length > 0) {
+      return buttons
+        .filter((b: any) => b?.icon && b?.path)
+        .slice(0, MAX_HEADER_BUTTONS);
+    }
+
     const icon = customizations.home?.header_button_icon;
     const path = customizations.home?.header_button_path;
-    return icon && path ? { icon, path } : null;
+    return icon && path ? [{ icon, path }] : [];
   }
 
-  private getCustomButtonHTML(): string {
-    const config = this.getHeaderButtonConfig();
-    if (!config) return '';
-    return `
-      <button class="apple-header-custom-button ${LiquidGlassClasses.headerButton}" data-path="${config.path}">
-        <ha-icon icon="${config.icon}"></ha-icon>
-      </button>
-    `;
+  private getCustomButtonsHTML(): string {
+    return this.getHeaderButtonsConfig()
+      .map((config, index) => `
+        <button class="apple-header-custom-button ${LiquidGlassClasses.headerButton}" data-path="${config.path}" data-index="${index}">
+          <ha-icon icon="${config.icon}"></ha-icon>
+        </button>
+      `)
+      .join('');
   }
 
   private navigateToCustomPath(path: string) {
@@ -622,37 +656,29 @@ export class AppleHeader {
   }
 
   /**
-   * Re-reads the custom header button config and creates/updates/removes its DOM
-   * element accordingly. Called after Home Settings saves, since the button's
-   * config lives in customizations rather than HeaderConfig.
+   * Re-reads the quick-switch header buttons config and rebuilds their DOM
+   * accordingly. Called after Home Settings saves, since the buttons' config
+   * lives in customizations rather than HeaderConfig.
    */
-  refreshCustomButton() {
+  refreshCustomButtons() {
     if (!this.headerElement) return;
-    const config = this.getHeaderButtonConfig();
-    let button = this.headerElement.querySelector('.apple-header-custom-button') as HTMLButtonElement | null;
+    const end = this.headerElement.querySelector('.apple-header-end') || this.headerElement.querySelector('.apple-header-content');
+    if (!end) return;
 
-    if (!config) {
-      button?.remove();
-      return;
-    }
+    end.querySelectorAll('.apple-header-custom-button').forEach(button => button.remove());
 
-    if (!button) {
-      const content = this.headerElement.querySelector('.apple-header-content');
-      const menuButton = this.headerElement.querySelector('.apple-header-menu-button');
-      if (!content) return;
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = this.getCustomButtonHTML().trim();
-      button = wrapper.firstElementChild as HTMLButtonElement;
+    const menuButton = end.querySelector('.apple-header-menu-button');
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = this.getCustomButtonsHTML();
+    const buttons = Array.from(wrapper.children) as HTMLButtonElement[];
+    buttons.forEach(button => {
       if (menuButton) {
-        content.insertBefore(button, menuButton);
+        end.insertBefore(button, menuButton);
       } else {
-        content.appendChild(button);
+        end.appendChild(button);
       }
       this.attachCustomButtonListener(button);
-    } else {
-      button.querySelector('ha-icon')?.setAttribute('icon', config.icon);
-      button.dataset.path = config.path;
-    }
+    });
   }
 
   private getMenuButtonContent(): string {
@@ -679,6 +705,11 @@ export class AppleHeader {
     } else if (this.currentConfig.showBackButton) {
       // Room pages have back button
       editText = localize('edit.edit_room_view');
+    } else if (this.currentConfig.isGroupPage) {
+      // Group/chiclet pages (Climate, Security, etc.) reorder their own entity grid via the
+      // same drag-and-drop manager as the Home page (see AppleHomeView.handleEditModeChange),
+      // so the default edit_home_view text is reused rather than adding a new page-specific string.
+      editText = localize('edit.edit_home_view');
     }
 
     // Check if we're on mobile to conditionally hide sidebar toggle
@@ -867,11 +898,9 @@ export class AppleHeader {
       });
     }
 
-    // Custom (user-configurable) button click (if it exists)
-    const customButton = this.headerElement?.querySelector('.apple-header-custom-button') as HTMLButtonElement;
-    if (customButton) {
-      this.attachCustomButtonListener(customButton);
-    }
+    // Custom (user-configurable) quick-switch button clicks (if any exist)
+    const customButtons = this.headerElement?.querySelectorAll('.apple-header-custom-button') as NodeListOf<HTMLButtonElement>;
+    customButtons?.forEach(customButton => this.attachCustomButtonListener(customButton));
 
     // Window resize listener to update button visibility based on mobile/desktop
     if (!this.resizeListener) {
@@ -1637,8 +1666,8 @@ export class AppleHeader {
   private addSidebarButton() {
     if (!this.headerElement) return;
 
-    const headerContent = this.headerElement.querySelector('.apple-header-content');
-    if (!headerContent) return;
+    const headerStart = this.headerElement.querySelector('.apple-header-start') || this.headerElement.querySelector('.apple-header-content');
+    if (!headerStart) return;
 
     // Create the sidebar button element
     const sidebarButton = document.createElement('button');
@@ -1651,8 +1680,8 @@ export class AppleHeader {
       this.openSidebar();
     });
 
-    // Insert at the beginning of header content
-    headerContent.insertBefore(sidebarButton, headerContent.firstChild);
+    // Insert at the beginning of the start group (before the title)
+    headerStart.insertBefore(sidebarButton, headerStart.firstChild);
   }
 
   public updateDropdownTexts() {
@@ -1873,40 +1902,43 @@ export class AppleHeader {
       .apple-header-content {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: space-between;
+        gap: 8px;
         padding: 12px var(--apple-page-padding, 22px);
         position: relative;
       }
 
+      .apple-home-header.rtl .apple-header-content {
+        flex-direction: row-reverse;
+      }
+
+      /* Left group: back/sidebar button + title, always aligned together */
+      .apple-header-start {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      /* Right group: custom quick-switch buttons + menu button */
+      .apple-header-end {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+        max-width: 60%;
+        overflow: hidden;
+      }
+
       /* Back button - positioning only (glass effect from .liquid-glass-transparent) */
       .apple-header-back-button {
-        position: absolute;
-        left: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
+        position: static;
+        flex-shrink: 0;
       }
 
       .apple-header-back-button:active {
-        transform: translateY(-50%) scale(0.95);
-      }
-
-      /* Fixed top position for group pages */
-      .apple-home-header.group-page .apple-header-back-button {
-        top: 12px;
-        transform: none;
-      }
-
-      .apple-home-header.group-page .apple-header-back-button:active {
         transform: scale(0.95);
-      }
-
-      /* RTL positioning for group-page back button */
-      .apple-home-header.group-page.rtl .apple-header-back-button {
-        left: auto;
-        right: 16px;
-        top: 12px;
-        transform: none;
       }
 
       .apple-header-back-button ha-icon {
@@ -1916,37 +1948,23 @@ export class AppleHeader {
         z-index: 2;
       }
 
-      .apple-home-header.rtl .apple-header-back-button {
-        left: auto;
-        right: 16px;
-      }
-
       /* Mobile adjustments for back button */
       @media (max-width: 768px) {
         .apple-header-back-button {
-          left: 12px;
           width: 34px;
           height: 34px;
           min-width: 34px;
-        }
-
-        .apple-home-header.rtl .apple-header-back-button {
-          left: auto;
-          right: 12px;
         }
       }
 
       /* Sidebar button - positioning only (glass effect from .liquid-glass-transparent) */
       .apple-header-sidebar-button {
-        position: absolute;
-        left: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
+        position: static;
+        flex-shrink: 0;
       }
 
       .apple-header-sidebar-button:active {
-        transform: translateY(-50%) scale(0.95);
+        transform: scale(0.95);
       }
 
       .apple-header-sidebar-button ha-icon {
@@ -1955,64 +1973,26 @@ export class AppleHeader {
         z-index: 2;
       }
 
-      .apple-home-header.rtl .apple-header-sidebar-button {
-        left: auto !important;
-        right: 16px !important;
-      }
-
-      /* Fixed top position for group pages */
-      .apple-home-header.group-page .apple-header-sidebar-button {
-        top: 13px;
-        transform: none;
-      }
-
-      .apple-home-header.group-page .apple-header-sidebar-button:active {
-        transform: scale(0.95);
-      }
-
-      /* RTL positioning for group-page sidebar button on desktop */
-      .apple-home-header.group-page.rtl .apple-header-sidebar-button {
-        left: auto !important;
-        right: 16px !important;
-      }
-
       /* Mobile adjustments for sidebar button */
       @media (max-width: 768px) {
         .apple-header-sidebar-button {
-          left: 12px;
           width: 34px;
           height: 34px;
           min-width: 34px;
         }
-
-        .apple-home-header.group-page .apple-header-sidebar-button {
-          top: 13px;
-        }
-
-        /* RTL positioning for group-page sidebar button on mobile */
-        .apple-home-header.group-page.rtl .apple-header-sidebar-button {
-          left: auto !important;
-          right: 12px !important;
-          top: 10px;
-        }
-
-        .apple-home-header.rtl .apple-header-sidebar-button {
-          left: auto !important;
-          right: 12px !important;
-        }
       }
 
-      /* Scrolled content (center) */
+      /* Scrolled content (left-aligned, next to back/sidebar button) */
       .apple-header-scrolled {
         opacity: 0;
         visibility: hidden;
         transition: all 0.2s ease;
         pointer-events: none;
-        flex: 1;
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
+        min-width: 0;
       }
 
       .apple-home-header.scrolled .apple-header-scrolled,
@@ -2020,13 +2000,15 @@ export class AppleHeader {
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
-        width: 100%;
+        min-width: 0;
+        flex: 1;
       }
 
         .apple-header-scrolled-title-container {
           min-height: 44px;
           display: flex;
           align-items: center;
+          max-width: 100%;
         }
 
       .apple-header-scrolled-title {
@@ -2036,6 +2018,10 @@ export class AppleHeader {
         margin: 0;
         letter-spacing: -0.4px;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        text-align: start;
       }
 
       .apple-header-scrolled-chips {
@@ -2061,101 +2047,123 @@ export class AppleHeader {
 
       /* Menu button - positioning only (glass effect from .liquid-glass-transparent) */
       .apple-header-menu-button {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        right: 16px;
-        z-index: 10;
+        position: static;
+        flex-shrink: 0;
         font-family: inherit;
       }
 
       .apple-header-menu-button:active {
-        transform: translateY(-50%) scale(0.95);
-      }
-
-      /* Fixed top position for group pages */
-      .apple-home-header.group-page .apple-header-menu-button {
-        top: 12px;
-        transform: none;
+        transform: scale(0.95);
       }
 
       .apple-home-header.group-page .apple-header-menu-button:active {
         transform: scale(0.97);
       }
 
-      /* Custom (user-configurable) button - positioned just left of the menu button */
+      /* Custom (user-configurable) quick-switch buttons */
       .apple-header-custom-button {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        right: 64px;
-        z-index: 10;
+        position: static;
+        flex-shrink: 0;
         font-family: inherit;
       }
 
       .apple-header-custom-button:active {
-        transform: translateY(-50%) scale(0.95);
-      }
-
-      .apple-home-header.group-page .apple-header-custom-button {
-        top: 12px;
-        transform: none;
+        transform: scale(0.95);
       }
 
       .apple-home-header.group-page .apple-header-custom-button:active {
         transform: scale(0.97);
       }
 
-      /* RTL positioning for group-page menu button */
-      .apple-home-header.group-page.rtl .apple-header-menu-button {
-        right: auto !important;
-        left: 16px !important;
-        top: 12px;
-        transform: none;
-      }
-
-      .apple-home-header.rtl .apple-header-menu-button {
-        right: auto !important;
-        left: 16px !important;
-      }
-
-      /* RTL positioning for custom button (mirrors menu button) */
-      .apple-home-header.group-page.rtl .apple-header-custom-button {
-        left: auto !important;
-        right: 64px !important;
-        top: 12px;
-        transform: none;
-      }
-
-      .apple-home-header.rtl .apple-header-custom-button {
-        right: auto !important;
-        left: 64px !important;
-      }
-
-      /* Mobile adjustments for menu button */
+      /* Mobile adjustments for menu / custom buttons */
       @media (max-width: 768px) {
-        .apple-header-menu-button {
-          right: 12px;
-          width: 34px;
-          height: 34px;
-          min-width: 34px;
-        }
-
-        .apple-home-header.rtl .apple-header-menu-button {
-          right: auto !important;
-          left: 12px !important;
-        }
-
+        .apple-header-menu-button,
         .apple-header-custom-button {
-          right: 54px;
           width: 34px;
           height: 34px;
           min-width: 34px;
         }
 
-        .apple-home-header.rtl .apple-header-custom-button {
-          right: auto !important;
-          left: 54px !important;
+        .apple-header-end {
+          gap: 6px;
+        }
+      }
+
+      /* Legacy (non-compact) header style: centered title, back/sidebar/menu/custom
+         buttons overlaid absolutely - matches the dashboard's original look before the
+         compact header setting was introduced. Enabled by unchecking "Compact Header"
+         in Home Settings (customizations.ui.compact_header = false). */
+      .apple-home-header.legacy-title .apple-header-content {
+        justify-content: center;
+      }
+
+      .apple-home-header.legacy-title .apple-header-back-button,
+      .apple-home-header.legacy-title .apple-header-sidebar-button {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+      }
+
+      .apple-home-header.legacy-title.group-page .apple-header-back-button,
+      .apple-home-header.legacy-title.group-page .apple-header-sidebar-button {
+        top: 12px;
+        transform: none;
+      }
+
+      .apple-home-header.legacy-title.rtl .apple-header-back-button,
+      .apple-home-header.legacy-title.rtl .apple-header-sidebar-button {
+        left: auto;
+        right: 16px;
+      }
+
+      .apple-home-header.legacy-title .apple-header-scrolled {
+        align-items: center;
+      }
+
+      .apple-home-header.legacy-title .apple-header-scrolled-title {
+        text-align: center;
+      }
+
+      .apple-home-header.legacy-title .apple-header-end {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        max-width: none;
+        overflow: visible;
+      }
+
+      .apple-home-header.legacy-title.group-page .apple-header-end {
+        top: 12px;
+        transform: none;
+      }
+
+      .apple-home-header.legacy-title.rtl .apple-header-end {
+        right: auto;
+        left: 16px;
+      }
+
+      @media (max-width: 768px) {
+        .apple-home-header.legacy-title .apple-header-back-button,
+        .apple-home-header.legacy-title .apple-header-sidebar-button {
+          left: 12px;
+        }
+
+        .apple-home-header.legacy-title.rtl .apple-header-back-button,
+        .apple-home-header.legacy-title.rtl .apple-header-sidebar-button {
+          left: auto;
+          right: 12px;
+        }
+
+        .apple-home-header.legacy-title .apple-header-end {
+          right: 12px;
+        }
+
+        .apple-home-header.legacy-title.rtl .apple-header-end {
+          right: auto;
+          left: 12px;
         }
       }
 
@@ -2366,19 +2374,10 @@ export class AppleHeader {
 
 
       /* Shadow DOM support - ensure RTL styles work within shadow roots */
-      :host([dir="rtl"]) .apple-header-back-button,
-      :host-context([dir="rtl"]) .apple-header-back-button {
-        left: auto;
-        right: 16px;
-        justify-content: flex-end;
-      }
-
-      :host([dir="rtl"]) .apple-header-menu-button,
-      :host-context([dir="rtl"]) .apple-header-menu-button {
-        right: auto;
-        left: 16px;
-      }
-
+      /* Back/sidebar/menu buttons no longer need dir-specific overrides: they're normal flex
+         children of .apple-header-content, which already reverses via .apple-home-header.rtl
+         .apple-header-content { flex-direction: row-reverse }. Only the absolutely-positioned
+         dropdown still needs an explicit RTL override. */
       :host([dir="rtl"]) .apple-header-dropdown,
       :host-context([dir="rtl"]) .apple-header-dropdown {
         right: auto;

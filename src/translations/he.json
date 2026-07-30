@@ -278,8 +278,8 @@
     "show_cost_description": "הצג נתוני עלות בלוח האנרגיה כאשר זמינים",
     "show_gas": "הצג גז",
     "show_gas_description": "הצג צריכת גז במסך הבית ובלוח האנרגיה כאשר מוגדר",
-    "header_button": "כפתור תפריט מותאם אישית",
-    "header_button_description": "הוסף כפתור אחד ליד סמל התפריט שמנווט ללוח מחוונים או דף אחר בעת הקשה",
+    "header_buttons": "כפתור תפריט מותאם אישית",
+    "header_buttons_description": "הוסף כפתור אחד ליד סמל התפריט שמנווט ללוח מחוונים או דף אחר בעת הקשה",
     "header_button_icon_placeholder": "סמל (למשל mdi:shield-home)",
     "header_button_path_placeholder": "נתיב (למשל security או lovelace/security)"
   },

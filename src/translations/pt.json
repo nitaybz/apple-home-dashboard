@@ -280,8 +280,8 @@
     "show_cost_description": "Mostra os valores de custo no painel de energia quando disponíveis",
     "show_gas": "Mostrar Gás",
     "show_gas_description": "Mostra o consumo de gás na tela inicial e no painel de energia quando configurado",
-    "header_button": "Botão de menu personalizado",
-    "header_button_description": "Adiciona um botão junto ao ícone do menu que navega para outro painel ou página ao tocar",
+    "header_buttons": "Botão de menu personalizado",
+    "header_buttons_description": "Adiciona um botão junto ao ícone do menu que navega para outro painel ou página ao tocar",
     "header_button_icon_placeholder": "Ícone (ex. mdi:shield-home)",
     "header_button_path_placeholder": "Caminho (ex. security ou lovelace/security)"
   },

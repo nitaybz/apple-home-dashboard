@@ -279,7 +279,11 @@
     "show_cost": "Mostra Costo",
     "show_cost_description": "Mostra i valori di costo nella dashboard energia quando disponibili",
     "show_gas": "Mostra Gas",
-    "show_gas_description": "Mostra il consumo di gas nella schermata principale e nella dashboard energia quando configurato"
+    "show_gas_description": "Mostra il consumo di gas nella schermata principale e nella dashboard energia quando configurato",
+    "header_buttons": "Pulsante di menu personalizzato",
+    "header_buttons_description": "Aggiunge un pulsante accanto all'icona del menu che consente di passare a un'altra dashboard o pagina quando viene toccato",
+    "header_button_icon_placeholder": "Icona (es. mdi:shield-home)",
+    "header_button_path_placeholder": "Percorso (es. security o lovelace/security)"
   },
   "status_messages": {
     "unavailable": "Non disponibile",

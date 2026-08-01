@@ -278,7 +278,11 @@
     "show_cost": "Mostrar Costo",
     "show_cost_description": "Muestra las cifras de costo en el panel de energía cuando estén disponibles",
     "show_gas": "Mostrar Gas",
-    "show_gas_description": "Muestra el consumo de gas en la pantalla principal y el panel de energía cuando esté configurado"
+    "show_gas_description": "Muestra el consumo de gas en la pantalla principal y el panel de energía cuando esté configurado",
+    "header_buttons": "Botón de menú personalizado",
+    "header_buttons_description": "Añade un botón junto al icono del menú que navega a otro panel o página al tocarlo",
+    "header_button_icon_placeholder": "Icono (p. ej. mdi:shield-home)",
+    "header_button_path_placeholder": "Ruta (p. ej. security o lovelace/security)"
   },
   "status_messages": {
     "unavailable": "No disponible",

@@ -268,6 +268,8 @@
     "search_switches": "Search for switches...",
     "hide_ha_header": "Hide Home Assistant Header",
     "hide_ha_sidebar": "Hide Home Assistant Sidebar",
+    "compact_header": "Compact Header",
+    "compact_header_description": "Show the page title merged into the top bar, left-aligned next to the menu button, on every page. Turn off to restore the original centered title that only appears below the top bar or after scrolling.",
     "weather_entity": "Weather Entity",
     "search_weather_entity": "Search for weather entities...",
     "weather_entity_description": "Select a weather entity to display a weather section on the home screen",
@@ -276,7 +278,14 @@
     "show_cost": "Show Cost",
     "show_cost_description": "Show cost figures on the energy dashboard when available",
     "show_gas": "Show Gas",
-    "show_gas_description": "Show gas consumption on the home screen and energy dashboard when configured"
+    "show_gas_description": "Show gas consumption on the home screen and energy dashboard when configured",
+    "header_buttons": "Custom Menu Buttons",
+    "header_buttons_description": "Add up to 3 buttons next to the menu icon that navigate to another dashboard or page when tapped",
+    "header_button_icon_placeholder": "Icon (e.g. mdi:shield-home)",
+    "header_button_path_placeholder": "Path (e.g. security or lovelace/security)",
+    "header_button_add": "Add Button",
+    "header_button_remove": "Remove button",
+    "header_button_max_reached": "Maximum of 3 buttons reached"
   },
   "status_messages": {
     "unavailable": "Unavailable",

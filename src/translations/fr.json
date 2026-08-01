@@ -277,7 +277,11 @@
     "show_cost": "Afficher le Coût",
     "show_cost_description": "Affiche les montants du coût sur le tableau de bord énergie lorsqu'ils sont disponibles",
     "show_gas": "Afficher le Gaz",
-    "show_gas_description": "Affiche la consommation de gaz sur l'écran d'accueil et le tableau de bord énergie lorsqu'elle est configurée"
+    "show_gas_description": "Affiche la consommation de gaz sur l'écran d'accueil et le tableau de bord énergie lorsqu'elle est configurée",
+    "header_buttons": "Bouton de menu personnalisé",
+    "header_buttons_description": "Ajoute un bouton à côté de l'icône du menu qui accède à un autre tableau de bord ou une autre page au toucher",
+    "header_button_icon_placeholder": "Icône (ex. mdi:shield-home)",
+    "header_button_path_placeholder": "Chemin (ex. security ou lovelace/security)"
   },
   "status_messages": {
     "unavailable": "Indisponible",

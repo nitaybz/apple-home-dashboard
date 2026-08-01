@@ -17,11 +17,20 @@ export interface HomeSettingsData {
   presetBackground?: string;
   hideHeader?: boolean;
   hideSidebar?: boolean;
+  compactHeader?: boolean;
   showSwitches?: boolean;
   showEnergy?: boolean;
   showCost?: boolean;
   showGas?: boolean;
+  /** @deprecated legacy single-button fields, kept only as a one-time migration source */
+  headerButtonIcon?: string;
+  /** @deprecated legacy single-button fields, kept only as a one-time migration source */
+  headerButtonPath?: string;
+  headerButtons?: Array<{ icon: string; path: string }>;
 }
+
+/** Max quick-switch header buttons a user can configure (keeps the header from crowding on mobile). */
+export const MAX_HEADER_BUTTONS = 3;
 
 export class HomeSettingsManager {
   private modal?: HTMLElement;
@@ -38,10 +47,12 @@ export class HomeSettingsManager {
     weatherEntity: undefined,
     backgroundType: 'preset',
     presetBackground: BackgroundManager.DEFAULT_BACKGROUND,
+    compactHeader: true,
     showSwitches: false,
     showEnergy: false,
     showCost: true,
-    showGas: true
+    showGas: true,
+    headerButtons: []
   };
   private tempSettings: HomeSettingsData = {
     favoriteAccessories: [],
@@ -52,10 +63,12 @@ export class HomeSettingsManager {
     weatherEntity: undefined,
     backgroundType: 'preset',
     presetBackground: BackgroundManager.DEFAULT_BACKGROUND,
+    compactHeader: true,
     showSwitches: false,
     showEnergy: false,
     showCost: true,
-    showGas: true
+    showGas: true,
+    headerButtons: []
   };
   private availableEntities: any[] = [];
   private allEntitiesForInclusion: any[] = [];
@@ -94,10 +107,14 @@ export class HomeSettingsManager {
       presetBackground: currentBackground.type === 'preset' ? currentBackground.backgroundImage : BackgroundManager.DEFAULT_BACKGROUND,
       hideHeader: customizations.ui?.hide_header || false,
       hideSidebar: customizations.ui?.hide_sidebar || false,
+      compactHeader: customizations.ui?.compact_header !== false,
       showSwitches: customizations.home?.show_switches || false,
       showEnergy: customizations.home?.show_energy || false,
       showCost: customizations.home?.show_cost !== false,
-      showGas: customizations.home?.show_gas !== false
+      showGas: customizations.home?.show_gas !== false,
+      headerButtonIcon: customizations.home?.header_button_icon || undefined,
+      headerButtonPath: customizations.home?.header_button_path || undefined,
+      headerButtons: this.loadHeaderButtons(customizations)
     };
 
     // Create a copy for temporary editing
@@ -113,13 +130,33 @@ export class HomeSettingsManager {
       presetBackground: this.settings.presetBackground,
       hideHeader: this.settings.hideHeader,
       hideSidebar: this.settings.hideSidebar,
+      compactHeader: this.settings.compactHeader,
       showSwitches: this.settings.showSwitches,
       showEnergy: this.settings.showEnergy,
       showCost: this.settings.showCost,
-      showGas: this.settings.showGas
+      showGas: this.settings.showGas,
+      headerButtonIcon: this.settings.headerButtonIcon,
+      headerButtonPath: this.settings.headerButtonPath,
+      headerButtons: (this.settings.headerButtons || []).map(b => ({ ...b }))
     };
 
     }
+
+  /**
+   * Reads the configured quick-switch header buttons, migrating the legacy single
+   * icon/path fields into the array shape the first time this runs for a given user
+   * (the migration is finalized once they save Home Settings, see saveSettings()).
+   */
+  private loadHeaderButtons(customizations: any): Array<{ icon: string; path: string }> {
+    const buttons = customizations.home?.header_buttons;
+    if (Array.isArray(buttons)) {
+      return buttons.map((b: any) => ({ icon: b?.icon || '', path: b?.path || '' }));
+    }
+
+    const icon = customizations.home?.header_button_icon;
+    const path = customizations.home?.header_button_path;
+    return icon && path ? [{ icon, path }] : [];
+  }
 
   private async loadAvailableEntities() {
     if (!this.hass) return;
@@ -289,6 +326,25 @@ export class HomeSettingsManager {
       </div>
 
       <div class="settings-section">
+        <h3 class="settings-section-header">${localize('settings.header_buttons')}</h3>
+        <div class="settings-card header-buttons-list">
+          ${this.renderHeaderButtonRows()}
+        </div>
+        <button
+          type="button"
+          class="header-button-add-row"
+          ${(this.tempSettings.headerButtons?.length ?? 0) >= MAX_HEADER_BUTTONS ? 'disabled' : ''}
+        >
+          + ${localize('settings.header_button_add')}
+        </button>
+        <p class="settings-section-description">
+          ${(this.tempSettings.headerButtons?.length ?? 0) >= MAX_HEADER_BUTTONS
+            ? localize('settings.header_button_max_reached')
+            : localize('settings.header_buttons_description')}
+        </p>
+      </div>
+
+      <div class="settings-section">
         <div class="settings-card switch-card">
           <div class="switch-setting-row">
             <span class="option-text">${localize('settings.show_switches_cards')}</span>
@@ -426,6 +482,18 @@ export class HomeSettingsManager {
           </div>
         </div>
       </div>
+
+      <div class="settings-section">
+        <div class="settings-card switch-card">
+          <div class="switch-setting-row">
+            <span class="option-text">${localize('settings.compact_header')}</span>
+            <div class="ui-setting-toggle" id="compact-header-toggle">
+              <div class="toggle-switch"></div>
+            </div>
+          </div>
+        </div>
+        <p class="settings-section-description">${localize('settings.compact_header_description')}</p>
+      </div>
     `;
   }
 
@@ -471,6 +539,17 @@ export class HomeSettingsManager {
         </div>
       `;
     }).join('');
+  }
+
+  private renderHeaderButtonRows(): string {
+    const buttons = this.tempSettings.headerButtons || [];
+    return buttons.map((button, index) => `
+      <div class="header-button-row" data-row-index="${index}">
+        <input type="text" class="settings-text-input header-button-icon-input" placeholder="${localize('settings.header_button_icon_placeholder')}" value="${button.icon || ''}" />
+        <input type="text" class="settings-text-input header-button-path-input" placeholder="${localize('settings.header_button_path_placeholder')}" value="${button.path || ''}" />
+        <button type="button" class="header-button-remove-row" aria-label="${localize('settings.header_button_remove')}">✕</button>
+      </div>
+    `).join('');
   }
 
   private renderSelectedWeatherEntity(entityId?: string): string {
@@ -681,6 +760,90 @@ export class HomeSettingsManager {
 
       .autocomplete-input::placeholder {
         color: rgba(255, 255, 255, 0.4);
+      }
+
+      .settings-text-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 16px;
+        background: rgba(39, 39, 39, 0.8);
+        border: 1px solid rgba(84, 84, 88, 0.8);
+        border-radius: var(--apple-input-radius, 10px);
+        color: white;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s ease;
+        margin-top: 16px;
+      }
+
+      .settings-text-input + .settings-text-input {
+        margin-top: 8px;
+      }
+
+      .settings-text-input:focus {
+        border-color: #ffaf00;
+      }
+
+      .settings-text-input::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .header-buttons-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .header-button-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .header-button-row .settings-text-input {
+        margin-top: 0;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .header-button-remove-row {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid rgba(84, 84, 88, 0.8);
+        background: rgba(39, 39, 39, 0.8);
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .header-button-remove-row:hover {
+        background: rgba(84, 84, 88, 0.5);
+        color: white;
+      }
+
+      .header-button-add-row {
+        margin-top: 12px;
+        padding: 10px 16px;
+        width: 100%;
+        box-sizing: border-box;
+        background: rgba(39, 39, 39, 0.8);
+        border: 1px dashed rgba(84, 84, 88, 0.8);
+        border-radius: var(--apple-input-radius, 10px);
+        color: #ffaf00;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      .header-button-add-row:hover:not(:disabled) {
+        background: rgba(84, 84, 88, 0.3);
+      }
+
+      .header-button-add-row:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
       }
 
       .autocomplete-results {
@@ -992,6 +1155,74 @@ export class HomeSettingsManager {
 
     // Setup background settings
     this.setupBackgroundEventListeners();
+
+    // Setup plain text settings
+    this.setupTextInputs();
+
+    // Setup quick-switch header buttons list (icon+path pairs, not a single scalar/array-of-strings
+    // setting, so it needs its own wiring rather than the generic data-setting loops above)
+    this.setupHeaderButtonsList();
+  }
+
+  private setupHeaderButtonsList() {
+    const container = this.modal?.querySelector('.header-buttons-list') as HTMLElement;
+    const addButton = this.modal?.querySelector('.header-button-add-row') as HTMLButtonElement;
+    if (!container || !addButton) return;
+
+    const rerender = () => {
+      container.innerHTML = this.renderHeaderButtonRows();
+      addButton.toggleAttribute('disabled', (this.tempSettings.headerButtons?.length ?? 0) >= MAX_HEADER_BUTTONS);
+      const description = this.modal?.querySelector('.header-buttons-list')?.parentElement?.querySelector('.settings-section-description');
+      if (description) {
+        description.textContent = (this.tempSettings.headerButtons?.length ?? 0) >= MAX_HEADER_BUTTONS
+          ? localize('settings.header_button_max_reached')
+          : localize('settings.header_buttons_description');
+      }
+      attachRowListeners();
+    };
+
+    const attachRowListeners = () => {
+      container.querySelectorAll('.header-button-row').forEach(row => {
+        const index = parseInt(row.getAttribute('data-row-index') || '-1', 10);
+        if (index < 0 || !this.tempSettings.headerButtons) return;
+
+        const iconInput = row.querySelector('.header-button-icon-input') as HTMLInputElement;
+        const pathInput = row.querySelector('.header-button-path-input') as HTMLInputElement;
+        const removeButton = row.querySelector('.header-button-remove-row') as HTMLButtonElement;
+
+        iconInput?.addEventListener('input', () => {
+          this.tempSettings.headerButtons![index].icon = iconInput.value.trim();
+        });
+        pathInput?.addEventListener('input', () => {
+          this.tempSettings.headerButtons![index].path = pathInput.value.trim();
+        });
+        removeButton?.addEventListener('click', () => {
+          this.tempSettings.headerButtons!.splice(index, 1);
+          rerender();
+        });
+      });
+    };
+
+    addButton.addEventListener('click', () => {
+      if ((this.tempSettings.headerButtons?.length ?? 0) >= MAX_HEADER_BUTTONS) return;
+      this.tempSettings.headerButtons = [...(this.tempSettings.headerButtons || []), { icon: '', path: '' }];
+      rerender();
+    });
+
+    attachRowListeners();
+  }
+
+  private setupTextInputs() {
+    const inputs = this.modal?.querySelectorAll('.settings-text-input');
+    inputs?.forEach(input => {
+      const setting = input.getAttribute('data-setting') as keyof HomeSettingsData;
+      if (!setting) return;
+
+      input.addEventListener('input', (e) => {
+        const value = (e.target as HTMLInputElement).value.trim();
+        (this.tempSettings[setting] as string | undefined) = value || undefined;
+      });
+    });
   }
 
   private setupAutocomplete() {
@@ -1200,7 +1431,10 @@ export class HomeSettingsManager {
       this.updateSelectedEntitiesDisplay(setting);
       return;
     }
-    const settingValue = this.tempSettings[setting];
+    // These entity-list functions are only ever invoked for the string[] entity-selector
+    // settings (favoriteAccessories, excludedFromHome, etc.) - headerButtons is a distinct
+    // Array<{icon,path}> shape wired up separately via setupHeaderButtonsList().
+    const settingValue = this.tempSettings[setting] as string[] | undefined;
     if (Array.isArray(settingValue) && !settingValue.includes(entityId)) {
       settingValue.push(entityId);
       this.updateSelectedEntitiesDisplay(setting);
@@ -1213,7 +1447,7 @@ export class HomeSettingsManager {
       this.updateSelectedEntitiesDisplay(setting);
       return;
     }
-    const settingValue = this.tempSettings[setting];
+    const settingValue = this.tempSettings[setting] as string[] | undefined;
     if (Array.isArray(settingValue)) {
       const index = settingValue.indexOf(entityId);
       if (index > -1) {
@@ -1232,7 +1466,7 @@ export class HomeSettingsManager {
         this.setupRemoveButtons();
         return;
       }
-      const settingValue = this.tempSettings[setting];
+      const settingValue = this.tempSettings[setting] as string[] | undefined;
       if (Array.isArray(settingValue)) {
         // Use the appropriate render method for extra accessories
         if (setting === 'extraAccessories') {
@@ -1312,7 +1546,9 @@ export class HomeSettingsManager {
       this.settings.showEnergy !== this.tempSettings.showEnergy ||
       this.settings.showCost !== this.tempSettings.showCost ||
       this.settings.showGas !== this.tempSettings.showGas ||
-      this.settings.weatherEntity !== this.tempSettings.weatherEntity;
+      this.settings.weatherEntity !== this.tempSettings.weatherEntity ||
+      (this.settings.compactHeader !== false) !== (this.tempSettings.compactHeader !== false) ||
+      JSON.stringify(this.settings.headerButtons) !== JSON.stringify(this.tempSettings.headerButtons);
     
     // Apply temporary settings to actual settings
     this.settings.favoriteAccessories = [...this.tempSettings.favoriteAccessories];
@@ -1326,10 +1562,12 @@ export class HomeSettingsManager {
     this.settings.presetBackground = this.tempSettings.presetBackground;
     this.settings.hideHeader = this.tempSettings.hideHeader;
     this.settings.hideSidebar = this.tempSettings.hideSidebar;
+    this.settings.compactHeader = this.tempSettings.compactHeader;
     this.settings.showSwitches = this.tempSettings.showSwitches;
     this.settings.showEnergy = this.tempSettings.showEnergy;
     this.settings.showCost = this.tempSettings.showCost;
     this.settings.showGas = this.tempSettings.showGas;
+    this.settings.headerButtons = (this.tempSettings.headerButtons || []).map(b => ({ ...b }));
 
     // Start modal fade immediately (while save happens in parallel)
     if (this.modal) {
@@ -1398,10 +1636,17 @@ export class HomeSettingsManager {
     home.show_energy = this.settings.showEnergy;
     home.show_cost = this.settings.showCost;
     home.show_gas = this.settings.showGas;
-    
+    home.header_buttons = (this.settings.headerButtons || [])
+      .filter(b => b.icon && b.path)
+      .slice(0, MAX_HEADER_BUTTONS);
+    // Migration complete: clear the legacy scalar fields now that header_buttons is authoritative.
+    home.header_button_icon = null;
+    home.header_button_path = null;
+
     const ui = this.customizationManager.getCustomization('ui') || {};
     ui.hide_header = this.settings.hideHeader;
     ui.hide_sidebar = this.settings.hideSidebar;
+    ui.compact_header = this.settings.compactHeader !== false;
 
     const background = {
       type: this.settings.backgroundType,
@@ -1453,6 +1698,7 @@ export class HomeSettingsManager {
     // Handle direct toggle clicks only
     const headerToggle = this.modal.querySelector('#header-toggle');
     const sidebarToggle = this.modal.querySelector('#sidebar-toggle');
+    const compactHeaderToggle = this.modal.querySelector('#compact-header-toggle');
     const switchesToggle = this.modal.querySelector('#switches-toggle');
     const energyToggle = this.modal.querySelector('#energy-toggle');
     const costToggle = this.modal.querySelector('#cost-toggle');
@@ -1469,7 +1715,13 @@ export class HomeSettingsManager {
       this.tempSettings.hideSidebar = !this.tempSettings.hideSidebar;
       this.updateUIToggle('sidebar-toggle', this.tempSettings.hideSidebar);
     });
-    
+
+    compactHeaderToggle?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.tempSettings.compactHeader = !this.tempSettings.compactHeader;
+      this.updateUIToggle('compact-header-toggle', this.tempSettings.compactHeader ?? true);
+    });
+
     switchesToggle?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.tempSettings.showSwitches = !this.tempSettings.showSwitches;
@@ -1555,6 +1807,7 @@ export class HomeSettingsManager {
   private initializeUIToggles() {
     this.updateUIToggle('header-toggle', this.tempSettings.hideHeader || false);
     this.updateUIToggle('sidebar-toggle', this.tempSettings.hideSidebar || false);
+    this.updateUIToggle('compact-header-toggle', this.tempSettings.compactHeader !== false);
     this.updateUIToggle('switches-toggle', this.tempSettings.showSwitches || false);
     this.updateUIToggle('energy-toggle', this.tempSettings.showEnergy || false);
     this.updateUIToggle('cost-toggle', this.tempSettings.showCost !== false);

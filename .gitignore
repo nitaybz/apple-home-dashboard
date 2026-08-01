@@ -37,3 +37,7 @@ pids/
 deploy.sh
 *.code-workspace
 CHANGELOG.md
+
+# Python bytecode (deploy tooling)
+__pycache__/
+*.py[cod]

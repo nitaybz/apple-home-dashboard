@@ -279,7 +279,11 @@
     "show_cost": "Kosten anzeigen",
     "show_cost_description": "Zeigt Kostenangaben im Energie-Dashboard, sofern verfügbar",
     "show_gas": "Gas anzeigen",
-    "show_gas_description": "Zeigt den Gasverbrauch auf dem Startbildschirm und im Energie-Dashboard, sofern konfiguriert"
+    "show_gas_description": "Zeigt den Gasverbrauch auf dem Startbildschirm und im Energie-Dashboard, sofern konfiguriert",
+    "header_buttons": "Eigene Menü-Schaltfläche",
+    "header_buttons_description": "Fügt eine Schaltfläche neben dem Menüsymbol hinzu, die beim Antippen zu einem anderen Dashboard oder einer anderen Seite navigiert",
+    "header_button_icon_placeholder": "Symbol (z. B. mdi:shield-home)",
+    "header_button_path_placeholder": "Pfad (z. B. security oder lovelace/security)"
   },
   "status_messages": {
     "unavailable": "Nicht verfügbar",

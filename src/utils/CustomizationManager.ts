@@ -777,6 +777,14 @@ export class CustomizationManager {
     return uiSettings.hide_sidebar === true;
   }
 
+  /** Compact header: title merged into the sticky top bar, left-aligned next to the
+   * hamburger/back button, shown immediately on every page. Defaults to true (on);
+   * set false to restore the original centered title / on-scroll-reveal behavior. */
+  isCompactHeaderEnabled(): boolean {
+    const uiSettings = this.getUISettings();
+    return uiSettings.compact_header !== false;
+  }
+
   async setHeaderVisibility(hidden: boolean): Promise<void> {
     await this.ensureCustomizationsLoaded();
     const uiSettings = this.getUISettings();

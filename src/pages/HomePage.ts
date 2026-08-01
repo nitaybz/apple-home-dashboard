@@ -52,17 +52,16 @@ export class HomePage {
     }
   }
 
-  private createHomeTitle(title: string): HTMLElement {
+  private createHomeTitle(): HTMLElement {
     const titleElement = document.createElement('h1');
     titleElement.className = 'apple-page-title';
-    titleElement.textContent = title;
+    titleElement.textContent = this._title || '';
     return titleElement;
   }
 
   async render(
     container: HTMLElement,
     hass: any,
-    title: string,
     onTallToggle?: (entityId: string, areaId: string) => void | Promise<void | boolean>
   ): Promise<void> {
     // Remove only dynamic content, keep permanent elements (header, chips) in place
@@ -72,8 +71,11 @@ export class HomePage {
       if (!isPermanent) child.remove();
     });
 
-    // Add home title after header but before chips
-    const homeTitle = this.createHomeTitle(title);
+    // Add home title after header but before chips, same position as the other pages'
+    // .apple-page-title. In compact header mode this is hidden via CSS since the home name
+    // is already shown in the always-visible sticky header instead (see AppleHeader's
+    // alwaysShowTitle); with compact mode off it's the only place the title is shown.
+    const homeTitle = this.createHomeTitle();
     const existingPermanentChips = container.querySelector('.permanent-chips');
     if (existingPermanentChips) {
       container.insertBefore(homeTitle, existingPermanentChips);

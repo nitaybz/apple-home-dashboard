@@ -114,8 +114,7 @@ export class EnergySection {
     const card = document.createElement('div');
     card.className = 'apple-energy-card';
     card.addEventListener('click', () => {
-      window.history.pushState(null, '', '/energy');
-      window.dispatchEvent(new Event('location-changed', { bubbles: true, composed: true }));
+      EnergySection.navigateToEnergyPage();
     });
 
     // Header row
@@ -1302,6 +1301,31 @@ export class EnergySection {
       }
     }
     return false;
+  }
+
+  /**
+   * Navigate to this dashboard's energy page.
+   *
+   * Mirrors the basePath handling used by AreaSection.navigateToPath so the
+   * energy card stays inside the dashboard. Pushing a bare '/energy' sends the
+   * user to Home Assistant's built-in energy panel instead, which loses the
+   * Apple Home styling and navigation — and is inconsistent with the Energy
+   * status chip, which already navigates to <dashboard>/energy.
+   */
+  private static navigateToEnergyPage(): void {
+    const currentPath = window.location.pathname;
+    let basePath = '';
+
+    if (currentPath.startsWith('/lovelace/') || currentPath === '/lovelace') {
+      basePath = '/lovelace/';
+    } else {
+      // Custom dashboard: extract the dashboard name
+      const pathParts = currentPath.split('/').filter(part => part.length > 0);
+      basePath = pathParts.length > 0 ? `/${pathParts[0]}/` : '/lovelace/';
+    }
+
+    window.history.pushState(null, '', `${basePath}energy`);
+    window.dispatchEvent(new Event('location-changed', { bubbles: true, composed: true }));
   }
 
   static getTotalPower(hass: any): number | null {

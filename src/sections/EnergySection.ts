@@ -81,6 +81,9 @@ export class EnergySection {
   private periodStatsCache: Map<string, { data: any; timestamp: number }> = new Map();
   private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private static cachedGridEntityIds: string[] | null = null;
+  // User-configured override for "Current Usage" (customizations.home.power_entity).
+  // Cached statically because getTotalPower is static, same as the grid IDs above.
+  private static cachedPowerEntity: string | null = null;
 
   private selectedPeriod: Period = 'day';
   private currentContainer: HTMLElement | null = null;
@@ -1044,6 +1047,9 @@ export class EnergySection {
       const gridEntityIds = this.getGridFromEntities(gridSources);
       EnergySection.cachedGridEntityIds = gridEntityIds.length > 0 ? gridEntityIds : null;
 
+      // Same for the optional "Current Usage" override
+      EnergySection.cachedPowerEntity = (await this.customizationManager.getPowerEntity()) || null;
+
       return prefs;
     } catch {
       return null;
@@ -1306,6 +1312,22 @@ export class EnergySection {
 
   static getTotalPower(hass: any): number | null {
     if (!hass?.states) return null;
+
+    // Strategy 0: explicit user override (customizations.home.power_entity).
+    // Auto-detection below picks the FIRST power sensor on the grid device,
+    // which is ambiguous when a device exposes several (solar/battery/grid/load
+    // on a Powerwall). When the user has named the sensor, trust it.
+    if (EnergySection.cachedPowerEntity) {
+      const state = hass.states[EnergySection.cachedPowerEntity];
+      if (state) {
+        const val = parseFloat(state.state);
+        if (!isNaN(val)) {
+          // Accept kW as well as W so the option works with either sensor.
+          const unit = state.attributes?.unit_of_measurement;
+          return unit === 'kW' ? val * 1000 : val;
+        }
+      }
+    }
 
     // Strategy 1: Use cached grid entity IDs from energy prefs (same as full page)
     if (EnergySection.cachedGridEntityIds && EnergySection.cachedGridEntityIds.length > 0 && hass.entities) {

@@ -703,6 +703,20 @@ export class CustomizationManager {
     return homeData.weather_entity || undefined;
   }
 
+  /**
+   * Optional override for the sensor behind "Current Usage".
+   *
+   * Auto-detection picks the first `device_class: power` sensor on the grid
+   * device, which is wrong when one device exposes several power sensors
+   * (a Tesla Powerwall reports solar, battery, grid and load) - see #55.
+   * Setting this pins the value to the sensor the user actually means.
+   */
+  async getPowerEntity(): Promise<string | undefined> {
+    await this.ensureCustomizationsLoaded();
+    const homeData = this.getCustomization('home');
+    return homeData.power_entity || undefined;
+  }
+
   async getShowEnergy(): Promise<boolean> {
     await this.ensureCustomizationsLoaded();
     const homeData = this.getCustomization('home');
